@@ -1,0 +1,187 @@
+🧾 Product Requirements Document (PRD)
+Product Name: Reddit Affiliate Opportunity Engine
+Prepared By: [Your Name]
+Last Updated: [Date]
+Tech Stack:
+
+Frontend: React (TypeScript) with Next.js (latest)
+
+Backend & Crawler: C# / .NET 8
+
+Database: Supabase (PostgreSQL + Auth + Storage)
+
+1. 🧠 Define the Product
+Product Summary:
+Reddit Affiliate Opportunity Engine is a web-based platform that discovers high-ranking Reddit threads, identifies affiliate content opportunities, and helps users generate optimized posts or comments containing affiliate links.
+
+The platform targets solo affiliate marketers, SEO strategists, and AI tool promoters looking to insert their affiliate programs naturally into Reddit threads — especially those that rank well on Google.
+
+Target Users:
+Reddit-based affiliate marketers
+
+Solo SaaS founders with affiliate programs
+
+Growth hackers & content marketers
+
+Users promoting AI SaaS tools (Jasper, Frase, Writesonic, etc.)
+
+Problem Solved:
+Finding profitable, compliant Reddit threads for affiliate insertion is manual and time-consuming. This tool automates opportunity discovery by scraping Reddit, detects thread intent, and highlights threads that rank in Google — streamlining affiliate content strategy on Reddit.
+
+2. 🎯 Goals and KPIs
+Goal	KPI
+Automatically discover Reddit threads relevant to affiliate programs	At least 30 new relevant threads per day
+Classify thread intent (e.g. DISCOVERY, COMPARISON)	85% accuracy on validation set
+Detect Reddit threads that rank on Google SERPs	90% coverage of top 100 Google results for tracked keywords
+Allow users to generate optimized affiliate comments	1-click comment generation with ≥ 50% CTR on test campaigns
+Replace Reddit API with scraper-based MVP	Fully functioning without Reddit API or auth
+3. 📌 Assumptions & Constraints
+Assumptions:
+Most valuable Reddit threads can be discovered via public HTML scraping.
+
+Affiliate keywords can be matched using basic NLP and scoring rules.
+
+Reddit threads that rank in Google are high-value opportunities.
+
+One primary user (you) will test this MVP; scale comes later.
+
+Constraints:
+Reddit’s API is not used (due to auth/token restrictions).
+
+Scraper must throttle requests to avoid IP bans or rate-limiting.
+
+Supabase has row limits and rate limits on free tier — handle storage efficiently.
+
+4. 🗂️ Scope of Work
+In Scope (MVP):
+Reddit HTML crawler using .NET
+
+Thread scoring engine with keyword + intent classification
+
+Google SERP checker (Playwright or alternative .NET-compatible scraper)
+
+C# backend with API endpoints to serve opportunities
+
+React + Next.js frontend for dashboard
+
+Supabase DB to store threads, affiliate metadata, and SERP results
+
+Out of Scope (for MVP):
+Auto-posting comments (to avoid violating Reddit TOS)
+
+User accounts or multi-user support
+
+Full analytics or engagement tracking (CTR, earnings)
+
+5. 🧩 Features & Functional Requirements
+🔍 Reddit Crawler (C#)
+Scrape posts from hot, new, top in selected subreddits
+
+Extract: title, body, subreddit, upvotes, flair, permalink
+
+Filter and score by:
+
+Affiliate keyword match
+
+Thread type (question, review, comparison)
+
+Engagement metrics
+
+Save to Supabase
+
+🌐 Google SERP Checker (C# or Playwright via CLI)
+For each keyword or thread title, search Google:
+
+site:reddit.com {title}
+
+Store position of matching Reddit thread in SERP
+
+Mark as serp_rank: true if found in top 10
+
+🧠 Opportunity Engine
+Score threads by:
+
+Affiliate match
+
+Intent confidence
+
+Google rank presence
+
+Store score in Supabase with normalized schema
+
+🖥 Frontend: Opportunity Dashboard (Next.js)
+View opportunity list with filters:
+
+By subreddit, score, intent, SERP match
+
+Thread preview modal (Reddit snippet + matched keywords)
+
+Comment generation UI:
+
+Choose affiliate program
+
+Insert template with link + promo code
+
+⚙️ Backend API (C#/.NET)
+/api/opportunities → Get scored threads
+
+/api/run-crawler → Trigger crawler (optional)
+
+/api/keywords → Manage affiliate keyword sets
+
+/api/generate-comment → Return templated comment block
+
+6. 🚀 Release Criteria
+Category	Requirement
+Functionality	Reddit crawler runs manually or on schedule; Google checker identifies ranked threads
+Reliability	System crawls at least 10 subreddits without crashes or IP blocks
+Usability	User can view opportunities and generate comments in 3 clicks or less
+Performance	Thread analysis completes within 5 minutes for 10+ subreddits
+Security	No Reddit API keys stored; all data read-only from public web
+Storage	Supabase handles thread storage, affiliate program metadata, and SERP results
+7. 📈 Success Metrics
+Metric	Target
+Opportunities discovered per crawl	≥ 30
+Thread scoring confidence	≥ 85%
+SERP-rank detection accuracy	≥ 90% match with known Google results
+Affiliate tool mentions in threads	≥ 3 per crawl
+UI click-to-comment generation time	< 10 seconds
+✅ Dependencies
+Supabase project + table schema setup
+
+Playwright or compatible SERP scraper for .NET
+
+Server-side crawler runner (can be manual at first)
+
+Affiliate metadata config (list of programs, links, promo codes)
+
+UI templates for DISCOVERY, COMPARISON, QUESTION replies
+
+🗂 Recommended Folder Structure
+bash
+Copy
+Edit
+/frontend
+  ├── /components
+  ├── /pages
+  ├── /lib
+  └── /hooks
+
+/backend
+  ├── /Controllers
+  ├── /Services
+  ├── /Models
+  └── /SupabaseClient.cs
+
+/crawler
+  ├── /RedditCrawler.cs
+  ├── /SerpChecker.cs
+  ├── /IntentClassifier.cs
+  └── /AffiliateMatcher.cs
+
+/supabase
+  ├── schema.sql
+  └── seeds.json
+
+/docs
+  └── PRD.md
