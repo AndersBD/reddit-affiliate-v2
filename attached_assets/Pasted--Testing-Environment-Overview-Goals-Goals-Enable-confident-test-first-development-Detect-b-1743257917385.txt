@@ -1,0 +1,174 @@
+✅ Testing Environment: Overview & Goals
+📌 Goals:
+Enable confident, test-first development
+
+Detect breaking changes early across frontend/backend
+
+Support isolated unit tests, integration tests, and some end-to-end (E2E) flows
+
+Be CI/CD-friendly (GitHub Actions ready)
+
+🧱 Test Framework Setup per Stack
+🧪 Frontend (TypeScript, React, Next.js – via T3 App)
+Use:
+
+Unit + Integration Tests → Vitest (comes with T3)
+
+E2E Tests → Playwright
+
+Mocking Supabase → msw (for HTTP mocking)
+
+Directory convention:
+
+bash
+Copy
+Edit
+/src
+  ├── /components
+  │     └── MyComponent.test.tsx
+  ├── /pages
+  ├── /lib
+/tests
+  ├── e2e/
+      └── opportunities.spec.ts
+Vitest integrates beautifully with React Testing Library and Next.js — no config needed via create-t3-app.
+
+🧪 Backend + Crawler (C#/.NET)
+Use:
+
+Unit + Integration Tests → xUnit
+
+Mocking → Moq
+
+Test Coverage → Built-in dotnet test --collect:"Code Coverage"
+
+Directory convention:
+
+bash
+Copy
+Edit
+/backend
+  ├── /Services
+  ├── /Models
+/tests
+  ├── /Backend.Tests/
+      ├── RedditCrawlerTests.cs
+      ├── SerpCheckerTests.cs
+      └── AffiliateMatcherTests.cs
+Add a test project via:
+
+bash
+Copy
+Edit
+dotnet new xunit -n Backend.Tests
+dotnet add Backend.Tests reference ../backend
+🧪 Database (Supabase Integration)
+Use:
+
+Mock Supabase REST API with msw in frontend tests.
+
+Local Supabase for integration: Use Supabase CLI and spin up:
+
+bash
+Copy
+Edit
+supabase start
+Schema migration tests → Use .sql + migration test runners (manual or via pgTAP if needed).
+
+🔁 TDD-Friendly Workflow
+1. Frontend (Vitest + TDD)
+ts
+Copy
+Edit
+// src/components/OpportunityCard.test.tsx
+test('renders opportunity title', () => {
+  render(<OpportunityCard title="AI tools for SEO" />);
+  expect(screen.getByText("AI tools for SEO")).toBeInTheDocument();
+});
+ts
+Copy
+Edit
+// src/components/OpportunityCard.tsx
+export function OpportunityCard({ title }: { title: string }) {
+  return <h2>{title}</h2>;
+}
+2. Backend (xUnit TDD)
+csharp
+Copy
+Edit
+[Fact]
+public void ExtractKeywords_ShouldMatchAffiliateKeyword()
+{
+    var matcher = new AffiliateMatcher(new[] { "jasper", "frase" });
+    var result = matcher.Extract("Is Jasper better than Frase?");
+    Assert.Contains("jasper", result);
+    Assert.Contains("frase", result);
+}
+🧪 Recommended Test Types
+Layer	Tool	Type	Examples
+Frontend	Vitest	Unit, Component	Button, Card, API Hook
+Frontend	Playwright	E2E	Load dashboard, trigger scraper
+Backend/C#	xUnit	Unit, Integration	Keyword matcher, crawler
+Crawler	xUnit + Mocks	Data Extraction	Reddit post parsing, SERP rank
+Database	Supabase CLI	Integration	Test migrations & Supabase queries
+🧰 Suggested Testing Tooling & Scripts
+package.json scripts:
+json
+Copy
+Edit
+"scripts": {
+  "test": "vitest",
+  "test:watch": "vitest --watch",
+  "test:e2e": "playwright test",
+  "test:coverage": "vitest run --coverage"
+}
+.NET scripts (or VS Code Tasks):
+bash
+Copy
+Edit
+dotnet test Backend.Tests
+dotnet test Backend.Tests --collect:"Code Coverage"
+📊 CI-Friendly Testing with GitHub Actions
+Create .github/workflows/test.yml:
+
+yaml
+Copy
+Edit
+name: CI Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: supabase/postgres
+        ports: [5432:5432]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install deps
+        run: npm install
+      - name: Run frontend tests
+        run: npm run test
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0.x
+      - name: Run backend tests
+        run: dotnet test ./tests/Backend.Tests
+✅ TL;DR: Your Testing Stack
+Layer	Frameworks Used
+Frontend	Vitest, Testing Library, MSW
+E2E	Playwright
+Backend	xUnit, Moq
+Crawler	xUnit
+Supabase	Supabase CLI, optional pgTAP
+CI	GitHub Actions
