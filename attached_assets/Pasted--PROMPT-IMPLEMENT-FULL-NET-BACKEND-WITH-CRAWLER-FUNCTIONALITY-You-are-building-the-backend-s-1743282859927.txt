@@ -1,0 +1,118 @@
+🛠️ PROMPT: IMPLEMENT FULL .NET BACKEND WITH CRAWLER FUNCTIONALITY
+
+You are building the backend system for a Reddit Affiliate Opportunity Engine. This backend will expose a REST API, run a custom Reddit crawler (HTML-based, not API-based), and manage all data through Supabase (PostgreSQL).
+
+---
+
+## 📦 TECH STACK
+
+- **Language:** C# (.NET 8)
+- **Framework:** ASP.NET Core Web API
+- **DB:** Supabase (PostgreSQL)
+- **Crawler:** HTML parser with `HttpClient` + `HtmlAgilityPack`
+- **Testing:** `xUnit`, `Moq`
+- **ORM:** Use `Supabase.Client` SDK or direct HTTP (no EF Core)
+
+---
+
+## 📁 PROJECT STRUCTURE TO FOLLOW
+
+/Backend ├── Controllers/ ├── Services/ ├── Models/ ├── Repositories/ ├── Crawler/ └── Tests/
+
+yaml
+Copy
+Edit
+
+---
+
+## 🧩 FEATURES TO IMPLEMENT
+
+### ✅ MODELS
+Create models to match Supabase schema:
+- `RedditThread`: id, title, body, subreddit, upvotes, permalink, created_utc
+- `AffiliateProgram`: id, name, keywords[], promo_code, link
+- `Opportunity`: thread_id, matched_keywords[], intent, score, serp_match
+
+### ✅ REPOSITORIES
+- Create repositories for each model using Supabase SDK or HTTP wrapper
+- Each repo should support CRUD and search by keyword or time
+
+### ✅ API CONTROLLERS
+Implement these endpoints:
+- `GET /api/opportunities` → List top 25 scored opportunities
+- `POST /api/keywords/match` → Accept thread text and return matched programs
+- `POST /api/crawler/run` → Trigger manual crawl + opportunity analysis
+
+### ✅ REDDIT HTML CRAWLER
+- Scrape `hot`, `new`, `top` from selected subreddits
+- Use `HtmlAgilityPack` with `HttpClient`
+- Parse: title, body, permalink, upvotes, flair
+- Detect duplicates before saving
+- Save raw threads to `reddit_threads` via Supabase
+
+### ✅ INTENT CLASSIFIER (RULE-BASED)
+- Classify Reddit threads as:
+  - DISCOVERY
+  - COMPARISON
+  - QUESTION
+  - SHOWCASE
+- Base classification on title keywords and question marks
+
+### ✅ AFFILIATE MATCHER
+- Load keyword lists from `affiliate_programs`
+- Match thread text against keywords
+- Return matched programs
+
+### ✅ OPPORTUNITY ENGINE
+- For each thread:
+  - Classify intent
+  - Run affiliate matcher
+  - Run (optional) Google SERP checker stub
+  - Score opportunity: based on upvotes + match strength
+  - Save/update to `opportunities` table
+
+---
+
+## 🔁 CRAWLER LOOP (Service)
+- Accept list of subreddits from config
+- Loop through each
+- Fetch threads
+- Process through intent + matchers
+- Save results
+- Log status and errors
+
+---
+
+## 🧪 TESTING & VALIDATION
+- Add `xUnit` tests for:
+  - `AffiliateMatcher`
+  - `IntentClassifier`
+  - `RedditCrawler`
+  - `OpportunityService`
+- Add test runner with code coverage
+
+---
+
+## 🧾 CONFIG & ENV
+- Use `appsettings.json` for:
+  - Subreddit list
+  - Supabase keys and base URL
+  - Crawler delay / rate limits
+- Add proper error handling for failed requests
+
+---
+
+## ✅ OUTPUT EXPECTATION
+
+When finished:
+- API should return structured opportunity data
+- Crawler can be triggered via `/api/crawler/run`
+- Database should populate with real Reddit threads
+- Opportunities should include score, match list, and intent
+
+---
+
+⚠️ Do not use Reddit API — use HTML scraping only  
+✅ Follow .NET dependency injection best practices  
+✅ Use async methods and proper cancellation tokens  
+✅ Respect Supabase row structure (avoid schema mismatches)
