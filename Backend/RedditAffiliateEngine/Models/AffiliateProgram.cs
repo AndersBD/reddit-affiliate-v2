@@ -31,6 +31,7 @@ namespace RedditAffiliateEngine.Models
         public bool Active { get; set; } = true;
         
         // Navigation properties
+        public List<Opportunity> Opportunities { get; set; } = new List<Opportunity>();
         public List<CommentTemplate> CommentTemplates { get; set; } = new List<CommentTemplate>();
     }
     
@@ -54,5 +55,31 @@ namespace RedditAffiliateEngine.Models
         public List<string>? Keywords { get; set; }
         public string? CommissionRate { get; set; }
         public bool? Active { get; set; }
+    }
+    
+    public class AffiliateProgramStats
+    {
+        public int TotalPrograms { get; set; }
+        public int ActivePrograms { get; set; }
+        public int InactivePrograms { get; set; }
+        public int TotalOpportunities { get; set; }
+        public Dictionary<string, int> OpportunitiesByProgram { get; set; } = new Dictionary<string, int>();
+        public List<AffiliateProgramMatch> TopMatchedPrograms { get; set; } = new List<AffiliateProgramMatch>();
+    }
+    
+    public class AffiliateProgramMatch
+    {
+        public int AffiliateProgramId { get; set; }
+        public string ProgramName { get; set; } = string.Empty;
+        public int MatchCount { get; set; }
+        public double AverageOpportunityScore { get; set; }
+    }
+    
+    public class KeywordAnalysisResult
+    {
+        public string Keyword { get; set; } = string.Empty;
+        public int Occurrences { get; set; }
+        public int ThreadsMatched { get; set; }
+        public double AverageOpportunityScore { get; set; }
     }
 }
