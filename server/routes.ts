@@ -7,6 +7,7 @@ import { getAllCategories, getAllSubreddits, getSubredditsByCategory, standardSu
 import { crawlerScheduler } from "./scheduler";
 import { serpCheckService } from "./services/serpCheckService";
 import { log } from "./vite";
+import DotNetCrawlerService from "./services/dotnetCrawlerService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add tRPC middleware
@@ -193,8 +194,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : getAllSubreddits();
       
       log(`Starting crawler for subreddits: ${subredditList.join(', ')}`, 'routes');
-      const crawlHistory = await storage.runCrawler(subredditList);
-      log(`Crawler completed with ID: ${crawlHistory.id}, threads: ${crawlHistory.threadCount}`, 'routes');
+      
+      // Use DotNetCrawlerService instead of direct storage access
+      const crawlHistory = await DotNetCrawlerService.runCrawler(subredditList);
+      
+      // Access ID and threadCount properties safely with optional chaining
+      const historyId = (crawlHistory as any).id || 'unknown';
+      const threadCount = (crawlHistory as any).threadCount || 0;
+      
+      log(`Crawler completed with ID: ${historyId}, threads: ${threadCount}`, 'routes');
       res.json(crawlHistory);
     } catch (error) {
       console.error("Error running crawler:", error);
@@ -466,6 +474,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting SERP result:", error);
       res.status(500).json({ message: "Failed to delete SERP result" });
+    }
+  });
+  
+  // Test endpoint for directly testing the dotnetCrawlerService
+  app.post("/api/test-dotnet-crawler", async (req: Request, res: Response) => {
+    try {
+      const subreddits = req.body.subreddits || ['programming', 'javascript'];
+      const result = await DotNetCrawlerService.runCrawler(subreddits);
+      res.status(200).json({ message: 'DotNet crawler test successful', result });
+    } catch (error) {
+      console.error('Error testing dotnet crawler:', error);
+      res.status(500).json({ error: 'Failed to test dotnet crawler', details: error.message });
     }
   });
   

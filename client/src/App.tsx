@@ -9,12 +9,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { trpc } from "./lib/trpc";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
+import CrawlerTest from "@/pages/CrawlerTest";
 import Layout from "@/components/Layout";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Dashboard} />
+      <Route path="/crawler-test" component={CrawlerTest} />
       <Route component={NotFound} />
     </Switch>
   );
