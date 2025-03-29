@@ -1,0 +1,40 @@
+
+> rest-express@1.0.0 dev
+10:56:26 PM [scheduler] Crawler job scheduled to run every 12 hours
+Crawler scheduler started by default
+10:56:26 PM [express] serving on port 5000
+10:56:32 PM [routes] Starting crawler for subreddits: gadgets, technology
+10:56:32 PM [crawler] Starting real Reddit crawler for 2 subreddits
+10:56:32 PM [crawler] Starting to crawl 2 subreddits
+10:56:32 PM [crawler] Scraping subreddit: gadgets, limit: 5
+10:56:32 PM [crawler] Error scraping subreddit gadgets: Request failed with status code 403
+10:56:34 PM [crawler] Scraping subreddit: technology, limit: 5
+10:56:34 PM [crawler] Error scraping subreddit technology: Request failed with status code 403
+10:56:35 PM [express] GET /api/threads 304 in 62ms :: {"threads":[{"id":12,"title":"Jasper AI vs Copy…
+10:56:35 PM [express] GET /api/threads 304 in 110ms :: {"threads":[{"id":12,"title":"Jasper AI vs Cop…
+10:56:35 PM [express] GET /api/affiliate-programs 304 in 117ms :: [{"id":1,"name":"Amazon Associates"…
+10:56:36 PM [crawler] Completed crawling with 0 threads collected
+10:56:36 PM [crawler] Crawled 0 threads from Reddit
+10:56:36 PM [routes] Crawler completed with ID: 6, threads: 0
+10:56:36 PM [express] POST /api/run-crawler 200 in 4716ms :: {"id":6,"startedAt":"2025-03-29T22:56:32…
+11:20:30 PM [routes] Starting crawler for subreddits: SaaS, Entrepreneur, startups, passive_income, affiliatemarketing, bloggers, juststart
+11:20:30 PM [crawler] Starting real Reddit crawler for 7 subreddits
+11:20:30 PM [crawler] Starting to crawl 7 subreddits
+11:20:30 PM [crawler] Scraping subreddit: SaaS, limit: 5
+11:20:30 PM [crawler] Error scraping subreddit SaaS: Request failed with status code 403
+11:20:32 PM [crawler] Scraping subreddit: Entrepreneur, limit: 5
+11:20:32 PM [crawler] Error scraping subreddit Entrepreneur: Request failed with status code 403
+11:20:34 PM [crawler] Scraping subreddit: startups, limit: 5
+11:20:34 PM [crawler] Error scraping subreddit startups: Request failed with status code 403
+11:20:36 PM [crawler] Scraping subreddit: passive_income, limit: 5
+11:20:36 PM [crawler] Error scraping subreddit passive_income: Request failed with status code 403
+11:20:38 PM [crawler] Scraping subreddit: affiliatemarketing, limit: 5
+11:20:38 PM [crawler] Error scraping subreddit affiliatemarketing: Request failed with status code 403
+11:20:40 PM [crawler] Scraping subreddit: bloggers, limit: 5
+11:20:40 PM [crawler] Error scraping subreddit bloggers: Request failed with status code 403
+11:20:42 PM [crawler] Scraping subreddit: juststart, limit: 5
+11:20:43 PM [crawler] Error scraping subreddit juststart: Request failed with status code 403
+11:20:45 PM [crawler] Completed crawling with 0 threads collected
+11:20:45 PM [crawler] Crawled 0 threads from Reddit
+11:20:45 PM [routes] Crawler completed with ID: 7, threads: 0
+11:20:45 PM [express] POST /api/run-crawler 200 in 14934ms :: {"id":7,"startedAt":"2025-03-29T23:20:3…
