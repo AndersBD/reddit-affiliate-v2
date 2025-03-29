@@ -64,6 +64,44 @@ export interface ThreadFilterOptions {
   sortDirection?: 'asc' | 'desc';
 }
 
+// Types for Opportunities
+export interface Opportunity {
+  id: number;
+  threadId: number;
+  score: number;
+  intent: string | null;
+  matchedProgramIds: number[];
+  serpMatch: boolean;
+  action: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Types for Opportunity Filtering
+export interface OpportunityFilterOptions {
+  threadId?: number;
+  intent?: string;
+  score?: number;
+  scoreMin?: number;
+  scoreMax?: number;
+  serpMatch?: boolean;
+  action?: string;
+  limit?: number;
+  offset?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
+// Types for SERP Results
+export interface SerpResult {
+  id: number;
+  threadId: number;
+  query: string;
+  position: number;
+  isRanked: boolean;
+  checkedAt: string;
+}
+
 // Types for Comment Generation
 export interface GenerateCommentRequest {
   threadId: number;

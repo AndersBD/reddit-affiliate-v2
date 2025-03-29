@@ -100,3 +100,43 @@ export const insertCrawlHistorySchema = createInsertSchema(crawlHistory).omit({
 
 export type InsertCrawlHistory = z.infer<typeof insertCrawlHistorySchema>;
 export type CrawlHistory = typeof crawlHistory.$inferSelect;
+
+// Opportunities table
+export const opportunities = pgTable("opportunities", {
+  id: serial("id").primaryKey(),
+  threadId: integer("thread_id").notNull(),
+  score: integer("score").notNull().default(0),
+  intent: text("intent"),
+  matchedProgramIds: json("matched_program_ids").$type<number[]>().notNull().default([]),
+  serpMatch: boolean("serp_match").notNull().default(false),
+  action: text("action"), // e.g., "replied", "pending", "ignored"
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertOpportunitySchema = createInsertSchema(opportunities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOpportunity = z.infer<typeof insertOpportunitySchema>;
+export type Opportunity = typeof opportunities.$inferSelect;
+
+// SERP results table
+export const serpResults = pgTable("serp_results", {
+  id: serial("id").primaryKey(),
+  threadId: integer("thread_id").notNull(),
+  query: text("query").notNull(),
+  position: integer("position"),
+  checkedAt: timestamp("checked_at").notNull().defaultNow(),
+  isRanked: boolean("is_ranked").notNull().default(false),
+});
+
+export const insertSerpResultSchema = createInsertSchema(serpResults).omit({
+  id: true,
+  checkedAt: true,
+});
+
+export type InsertSerpResult = z.infer<typeof insertSerpResultSchema>;
+export type SerpResult = typeof serpResults.$inferSelect;

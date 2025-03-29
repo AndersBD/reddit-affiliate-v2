@@ -193,6 +193,281 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get opportunities with filtering
+  app.get("/api/opportunities", async (req: Request, res: Response) => {
+    const { 
+      threadId, 
+      intent, 
+      score,
+      scoreMin,
+      scoreMax,
+      serpMatch,
+      action,
+      limit = 10, 
+      offset = 0,
+      sortBy,
+      sortDirection
+    } = req.query;
+    
+    try {
+      const opportunities = await storage.getOpportunities({
+        threadId: threadId ? parseInt(threadId as string) : undefined,
+        intent: intent as string,
+        score: score ? parseInt(score as string) : undefined,
+        scoreMin: scoreMin ? parseInt(scoreMin as string) : undefined,
+        scoreMax: scoreMax ? parseInt(scoreMax as string) : undefined,
+        serpMatch: serpMatch ? (serpMatch === 'true') : undefined,
+        action: action as string,
+        limit: limit ? parseInt(limit as string) : undefined,
+        offset: offset ? parseInt(offset as string) : undefined,
+        sortBy: sortBy as string,
+        sortDirection: (sortDirection as 'asc' | 'desc') || 'desc'
+      });
+      
+      const total = (await storage.getOpportunities({
+        threadId: threadId ? parseInt(threadId as string) : undefined,
+        intent: intent as string,
+        score: score ? parseInt(score as string) : undefined,
+        scoreMin: scoreMin ? parseInt(scoreMin as string) : undefined,
+        scoreMax: scoreMax ? parseInt(scoreMax as string) : undefined,
+        serpMatch: serpMatch ? (serpMatch === 'true') : undefined,
+        action: action as string
+      })).length;
+      
+      res.json({
+        opportunities,
+        total,
+        limit: parseInt(limit as string),
+        offset: parseInt(offset as string)
+      });
+    } catch (error) {
+      console.error("Error fetching opportunities:", error);
+      res.status(500).json({ message: "Failed to fetch opportunities" });
+    }
+  });
+  
+  // Get opportunity by ID
+  app.get("/api/opportunities/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const opportunity = await storage.getOpportunityById(id);
+      
+      if (!opportunity) {
+        return res.status(404).json({ message: "Opportunity not found" });
+      }
+      
+      res.json(opportunity);
+    } catch (error) {
+      console.error("Error fetching opportunity:", error);
+      res.status(500).json({ message: "Failed to fetch opportunity" });
+    }
+  });
+  
+  // Get opportunities by thread ID
+  app.get("/api/threads/:threadId/opportunities", async (req: Request, res: Response) => {
+    try {
+      const threadId = parseInt(req.params.threadId);
+      const opportunities = await storage.getOpportunitiesByThreadId(threadId);
+      
+      res.json(opportunities);
+    } catch (error) {
+      console.error("Error fetching opportunities by thread ID:", error);
+      res.status(500).json({ message: "Failed to fetch opportunities" });
+    }
+  });
+
+  // Create an opportunity
+  app.post("/api/opportunities", async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        threadId: z.number(),
+        score: z.number(),
+        intent: z.string().optional(),
+        matchedProgramIds: z.array(z.number()),
+        serpMatch: z.boolean(),
+        action: z.string()
+      });
+      
+      const opportunityData = schema.parse(req.body);
+      
+      const opportunity = await storage.createOpportunity(opportunityData);
+      res.status(201).json(opportunity);
+    } catch (error) {
+      console.error("Error creating opportunity:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create opportunity" });
+    }
+  });
+  
+  // Update an opportunity
+  app.patch("/api/opportunities/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schema = z.object({
+        score: z.number().optional(),
+        intent: z.string().optional(),
+        matchedProgramIds: z.array(z.number()).optional(),
+        serpMatch: z.boolean().optional(),
+        action: z.string().optional()
+      });
+      
+      const opportunityData = schema.parse(req.body);
+      
+      const opportunity = await storage.updateOpportunity(id, opportunityData);
+      
+      if (!opportunity) {
+        return res.status(404).json({ message: "Opportunity not found" });
+      }
+      
+      res.json(opportunity);
+    } catch (error) {
+      console.error("Error updating opportunity:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update opportunity" });
+    }
+  });
+  
+  // Delete an opportunity
+  app.delete("/api/opportunities/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteOpportunity(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Opportunity not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting opportunity:", error);
+      res.status(500).json({ message: "Failed to delete opportunity" });
+    }
+  });
+  
+  // Get SERP results
+  app.get("/api/serp-results", async (_req: Request, res: Response) => {
+    try {
+      const serpResults = await storage.getSerpResults();
+      res.json(serpResults);
+    } catch (error) {
+      console.error("Error fetching SERP results:", error);
+      res.status(500).json({ message: "Failed to fetch SERP results" });
+    }
+  });
+  
+  // Get SERP result by ID
+  app.get("/api/serp-results/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const serpResult = await storage.getSerpResultById(id);
+      
+      if (!serpResult) {
+        return res.status(404).json({ message: "SERP result not found" });
+      }
+      
+      res.json(serpResult);
+    } catch (error) {
+      console.error("Error fetching SERP result:", error);
+      res.status(500).json({ message: "Failed to fetch SERP result" });
+    }
+  });
+  
+  // Get SERP results by thread ID
+  app.get("/api/threads/:threadId/serp-results", async (req: Request, res: Response) => {
+    try {
+      const threadId = parseInt(req.params.threadId);
+      const serpResults = await storage.getSerpResultsByThreadId(threadId);
+      
+      res.json(serpResults);
+    } catch (error) {
+      console.error("Error fetching SERP results by thread ID:", error);
+      res.status(500).json({ message: "Failed to fetch SERP results" });
+    }
+  });
+  
+  // Create a SERP result
+  app.post("/api/serp-results", async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        threadId: z.number(),
+        query: z.string(),
+        position: z.number(),
+        isRanked: z.boolean()
+      });
+      
+      const serpResultData = schema.parse(req.body);
+      
+      const serpResult = await storage.createSerpResult(serpResultData);
+      res.status(201).json(serpResult);
+    } catch (error) {
+      console.error("Error creating SERP result:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create SERP result" });
+    }
+  });
+  
+  // Update a SERP result
+  app.patch("/api/serp-results/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const schema = z.object({
+        query: z.string().optional(),
+        position: z.number().optional(),
+        isRanked: z.boolean().optional()
+      });
+      
+      const serpResultData = schema.parse(req.body);
+      
+      const serpResult = await storage.updateSerpResult(id, serpResultData);
+      
+      if (!serpResult) {
+        return res.status(404).json({ message: "SERP result not found" });
+      }
+      
+      res.json(serpResult);
+    } catch (error) {
+      console.error("Error updating SERP result:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update SERP result" });
+    }
+  });
+  
+  // Delete a SERP result
+  app.delete("/api/serp-results/:id", async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteSerpResult(id);
+      
+      if (!success) {
+        return res.status(404).json({ message: "SERP result not found" });
+      }
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting SERP result:", error);
+      res.status(500).json({ message: "Failed to delete SERP result" });
+    }
+  });
+  
+  // Refresh opportunities
+  app.post("/api/refresh-opportunities", async (_req: Request, res: Response) => {
+    try {
+      const count = await storage.refreshOpportunities();
+      res.json({ count, message: `Refreshed ${count} opportunities` });
+    } catch (error) {
+      console.error("Error refreshing opportunities:", error);
+      res.status(500).json({ message: "Failed to refresh opportunities" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

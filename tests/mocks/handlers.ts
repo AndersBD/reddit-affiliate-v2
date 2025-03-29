@@ -1,5 +1,12 @@
 import { http, HttpResponse } from 'msw';
-import type { RedditThread, AffiliateProgram, CommentTemplate, CrawlHistory } from '../../client/src/lib/types';
+import type { 
+  RedditThread, 
+  AffiliateProgram, 
+  CommentTemplate, 
+  CrawlHistory,
+  Opportunity,
+  SerpResult
+} from '../../client/src/lib/types';
 
 // Sample data for tests
 export const sampleThreads: RedditThread[] = [
@@ -100,6 +107,50 @@ export const sampleCrawlHistory: CrawlHistory[] = [
   }
 ];
 
+export const sampleOpportunities: Opportunity[] = [
+  {
+    id: 1,
+    threadId: 1,
+    score: 85,
+    intent: 'recommendation',
+    matchedProgramIds: [2],
+    serpMatch: true,
+    action: 'pending',
+    createdAt: '2023-05-15T12:35:00Z',
+    updatedAt: '2023-05-15T12:35:00Z'
+  },
+  {
+    id: 2,
+    threadId: 2,
+    score: 92,
+    intent: 'comparison',
+    matchedProgramIds: [1],
+    serpMatch: true,
+    action: 'pending',
+    createdAt: '2023-05-16T16:00:00Z',
+    updatedAt: '2023-05-16T16:00:00Z'
+  }
+];
+
+export const sampleSerpResults: SerpResult[] = [
+  {
+    id: 1,
+    threadId: 1,
+    query: 'best seo tool for keyword research',
+    position: 3,
+    isRanked: true,
+    checkedAt: '2023-05-15T12:32:00Z'
+  },
+  {
+    id: 2,
+    threadId: 2,
+    query: 'jasper ai vs copy.ai blogging',
+    position: 1,
+    isRanked: true,
+    checkedAt: '2023-05-16T15:50:00Z'
+  }
+];
+
 // API handler definitions for MSW
 export const handlers = [
   // Threads endpoints
@@ -197,5 +248,203 @@ export const handlers = [
     };
     
     return HttpResponse.json(newCrawl);
+  }),
+
+  // Opportunities endpoints
+  http.get('/api/opportunities', ({ request }) => {
+    const url = new URL(request.url);
+    const threadId = url.searchParams.get('threadId');
+    const intent = url.searchParams.get('intent');
+    const scoreMin = url.searchParams.get('scoreMin');
+    const scoreMax = url.searchParams.get('scoreMax');
+    const serpMatch = url.searchParams.get('serpMatch');
+    const action = url.searchParams.get('action');
+    
+    let filteredOpportunities = [...sampleOpportunities];
+    
+    if (threadId) {
+      filteredOpportunities = filteredOpportunities.filter(opp => opp.threadId === parseInt(threadId));
+    }
+    
+    if (intent) {
+      filteredOpportunities = filteredOpportunities.filter(opp => opp.intent === intent);
+    }
+    
+    if (scoreMin) {
+      filteredOpportunities = filteredOpportunities.filter(opp => opp.score >= parseInt(scoreMin));
+    }
+    
+    if (scoreMax) {
+      filteredOpportunities = filteredOpportunities.filter(opp => opp.score <= parseInt(scoreMax));
+    }
+    
+    if (serpMatch !== null) {
+      const serpMatchBool = serpMatch === 'true';
+      filteredOpportunities = filteredOpportunities.filter(opp => opp.serpMatch === serpMatchBool);
+    }
+    
+    if (action) {
+      filteredOpportunities = filteredOpportunities.filter(opp => opp.action === action);
+    }
+    
+    return HttpResponse.json({
+      opportunities: filteredOpportunities,
+      total: filteredOpportunities.length,
+      limit: 10,
+      offset: 0
+    });
+  }),
+  
+  http.get('/api/opportunities/:id', ({ params }) => {
+    const id = params.id;
+    const opportunity = sampleOpportunities.find(o => o.id === parseInt(id as string));
+    
+    if (!opportunity) {
+      return HttpResponse.json(
+        { message: 'Opportunity not found' },
+        { status: 404 }
+      );
+    }
+    
+    return HttpResponse.json(opportunity);
+  }),
+  
+  http.get('/api/threads/:threadId/opportunities', ({ params }) => {
+    const threadId = params.threadId;
+    const opportunities = sampleOpportunities.filter(o => o.threadId === parseInt(threadId as string));
+    
+    return HttpResponse.json({
+      opportunities,
+      total: opportunities.length,
+      limit: 10,
+      offset: 0
+    });
+  }),
+  
+  http.post('/api/opportunities', async ({ request }) => {
+    const body = await request.json();
+    
+    const newOpportunity: Opportunity = {
+      id: sampleOpportunities.length + 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...body
+    };
+    
+    return HttpResponse.json(newOpportunity);
+  }),
+  
+  http.patch('/api/opportunities/:id', async ({ params, request }) => {
+    const id = parseInt(params.id as string);
+    const body = await request.json();
+    
+    const opportunity = sampleOpportunities.find(o => o.id === id);
+    
+    if (!opportunity) {
+      return HttpResponse.json(
+        { message: 'Opportunity not found' },
+        { status: 404 }
+      );
+    }
+    
+    const updatedOpportunity: Opportunity = {
+      ...opportunity,
+      ...body,
+      updatedAt: new Date().toISOString()
+    };
+    
+    return HttpResponse.json(updatedOpportunity);
+  }),
+  
+  http.delete('/api/opportunities/:id', ({ params }) => {
+    const id = parseInt(params.id as string);
+    const opportunityExists = sampleOpportunities.some(o => o.id === id);
+    
+    if (!opportunityExists) {
+      return HttpResponse.json(
+        { message: 'Opportunity not found' },
+        { status: 404 }
+      );
+    }
+    
+    return HttpResponse.json({ success: true });
+  }),
+  
+  // SERP Results endpoints
+  http.get('/api/serp-results', () => {
+    return HttpResponse.json(sampleSerpResults);
+  }),
+  
+  http.get('/api/serp-results/:id', ({ params }) => {
+    const id = params.id;
+    const serpResult = sampleSerpResults.find(s => s.id === parseInt(id as string));
+    
+    if (!serpResult) {
+      return HttpResponse.json(
+        { message: 'SERP result not found' },
+        { status: 404 }
+      );
+    }
+    
+    return HttpResponse.json(serpResult);
+  }),
+  
+  http.get('/api/threads/:threadId/serp-results', ({ params }) => {
+    const threadId = params.threadId;
+    const serpResults = sampleSerpResults.filter(s => s.threadId === parseInt(threadId as string));
+    
+    return HttpResponse.json(serpResults);
+  }),
+  
+  http.post('/api/serp-results', async ({ request }) => {
+    const body = await request.json();
+    
+    const newSerpResult: SerpResult = {
+      id: sampleSerpResults.length + 1,
+      checkedAt: new Date().toISOString(),
+      ...body
+    };
+    
+    return HttpResponse.json(newSerpResult);
+  }),
+  
+  http.patch('/api/serp-results/:id', async ({ params, request }) => {
+    const id = parseInt(params.id as string);
+    const body = await request.json();
+    
+    const serpResult = sampleSerpResults.find(s => s.id === id);
+    
+    if (!serpResult) {
+      return HttpResponse.json(
+        { message: 'SERP result not found' },
+        { status: 404 }
+      );
+    }
+    
+    const updatedSerpResult: SerpResult = {
+      ...serpResult,
+      ...body
+    };
+    
+    return HttpResponse.json(updatedSerpResult);
+  }),
+  
+  http.delete('/api/serp-results/:id', ({ params }) => {
+    const id = parseInt(params.id as string);
+    const serpResultExists = sampleSerpResults.some(s => s.id === id);
+    
+    if (!serpResultExists) {
+      return HttpResponse.json(
+        { message: 'SERP result not found' },
+        { status: 404 }
+      );
+    }
+    
+    return HttpResponse.json({ success: true });
+  }),
+  
+  // Refresh opportunities endpoint
+  http.post('/api/refresh-opportunities', () => {
+    return HttpResponse.json({ count: 5 });
   })
 ];

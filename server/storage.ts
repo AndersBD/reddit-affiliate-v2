@@ -3,7 +3,9 @@ import {
   redditThreads, type RedditThread, type InsertRedditThread,
   affiliatePrograms, type AffiliateProgram, type InsertAffiliateProgram,
   commentTemplates, type CommentTemplate, type InsertCommentTemplate,
-  crawlHistory, type CrawlHistory, type InsertCrawlHistory
+  crawlHistory, type CrawlHistory, type InsertCrawlHistory,
+  opportunities, type Opportunity, type InsertOpportunity,
+  serpResults, type SerpResult, type InsertSerpResult
 } from "@shared/schema";
 
 // modify the interface with any CRUD methods
@@ -43,8 +45,27 @@ export interface IStorage {
   createCrawlHistory(history: InsertCrawlHistory): Promise<CrawlHistory>;
   updateCrawlHistory(id: number, history: Partial<InsertCrawlHistory>): Promise<CrawlHistory | undefined>;
   
+  // Opportunities operations
+  getOpportunities(options?: OpportunityFilterOptions): Promise<Opportunity[]>;
+  getOpportunityById(id: number): Promise<Opportunity | undefined>;
+  getOpportunitiesByThreadId(threadId: number): Promise<Opportunity[]>;
+  createOpportunity(opportunity: InsertOpportunity): Promise<Opportunity>;
+  updateOpportunity(id: number, opportunity: Partial<InsertOpportunity>): Promise<Opportunity | undefined>;
+  deleteOpportunity(id: number): Promise<boolean>;
+  
+  // SERP Results operations
+  getSerpResults(): Promise<SerpResult[]>;
+  getSerpResultById(id: number): Promise<SerpResult | undefined>;
+  getSerpResultsByThreadId(threadId: number): Promise<SerpResult[]>;
+  createSerpResult(serpResult: InsertSerpResult): Promise<SerpResult>;
+  updateSerpResult(id: number, serpResult: Partial<InsertSerpResult>): Promise<SerpResult | undefined>;
+  deleteSerpResult(id: number): Promise<boolean>;
+  
   // Trigger a crawler run
   runCrawler(subreddits: string[]): Promise<CrawlHistory>;
+  
+  // Refresh opportunities (analyze and score threads)
+  refreshOpportunities(): Promise<number>;
 }
 
 export interface ThreadFilterOptions {
@@ -59,18 +80,36 @@ export interface ThreadFilterOptions {
   sortDirection?: 'asc' | 'desc';
 }
 
+export interface OpportunityFilterOptions {
+  threadId?: number;
+  intent?: string;
+  score?: number;
+  scoreMin?: number;
+  scoreMax?: number;
+  serpMatch?: boolean;
+  action?: string;
+  limit?: number;
+  offset?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private redditThreads: Map<number, RedditThread>;
   private affiliatePrograms: Map<number, AffiliateProgram>;
   private commentTemplates: Map<number, CommentTemplate>;
   private crawlHistory: Map<number, CrawlHistory>;
+  private opportunities: Map<number, Opportunity>;
+  private serpResults: Map<number, SerpResult>;
   
   currentUserId: number;
   currentThreadId: number;
   currentAffiliateProgramId: number;
   currentCommentTemplateId: number;
   currentCrawlHistoryId: number;
+  currentOpportunityId: number;
+  currentSerpResultId: number;
 
   constructor() {
     this.users = new Map();
@@ -78,12 +117,16 @@ export class MemStorage implements IStorage {
     this.affiliatePrograms = new Map();
     this.commentTemplates = new Map();
     this.crawlHistory = new Map();
+    this.opportunities = new Map();
+    this.serpResults = new Map();
     
     this.currentUserId = 1;
     this.currentThreadId = 1;
     this.currentAffiliateProgramId = 1;
     this.currentCommentTemplateId = 1;
     this.currentCrawlHistoryId = 1;
+    this.currentOpportunityId = 1;
+    this.currentSerpResultId = 1;
     
     // Initialize with sample data
     this.initializeSampleData();
@@ -252,6 +295,64 @@ export class MemStorage implements IStorage {
     
     crawlHistory.forEach(history => {
       this.createCrawlHistory(history as InsertCrawlHistory);
+    });
+    
+    // Add sample opportunities
+    const opportunities = [
+      {
+        threadId: 1,
+        score: 92,
+        intent: "COMPARISON",
+        matchedProgramIds: [1, 2, 3],
+        serpMatch: true,
+        action: "pending"
+      },
+      {
+        threadId: 2,
+        score: 95,
+        intent: "QUESTION",
+        matchedProgramIds: [5, 6],
+        serpMatch: true,
+        action: "pending"
+      },
+      {
+        threadId: 3,
+        score: 89,
+        intent: "REVIEW",
+        matchedProgramIds: [1],
+        serpMatch: true,
+        action: "pending"
+      }
+    ];
+    
+    opportunities.forEach(opportunity => {
+      this.createOpportunity(opportunity as InsertOpportunity);
+    });
+    
+    // Add sample SERP results
+    const serpResults = [
+      {
+        threadId: 1,
+        query: "best ai writing tool",
+        position: 3,
+        isRanked: true
+      },
+      {
+        threadId: 2,
+        query: "best seo tool for keyword research",
+        position: 1,
+        isRanked: true
+      },
+      {
+        threadId: 3,
+        query: "is jasper ai worth it",
+        position: 8,
+        isRanked: true
+      }
+    ];
+    
+    serpResults.forEach(serpResult => {
+      this.createSerpResult(serpResult as InsertSerpResult);
     });
   }
 
@@ -530,6 +631,233 @@ export class MemStorage implements IStorage {
     }, 5000);
     
     return crawlHistory;
+  }
+
+  // Opportunity methods
+  async getOpportunities(options: OpportunityFilterOptions = {}): Promise<Opportunity[]> {
+    let opportunities = Array.from(this.opportunities.values());
+    
+    // Apply filters
+    if (options.threadId !== undefined) {
+      opportunities = opportunities.filter(opportunity => opportunity.threadId === options.threadId);
+    }
+    
+    if (options.intent) {
+      opportunities = opportunities.filter(opportunity => opportunity.intent === options.intent);
+    }
+    
+    if (options.score !== undefined) {
+      opportunities = opportunities.filter(opportunity => opportunity.score === options.score);
+    }
+    
+    if (options.scoreMin !== undefined) {
+      opportunities = opportunities.filter(opportunity => opportunity.score >= options.scoreMin!);
+    }
+    
+    if (options.scoreMax !== undefined) {
+      opportunities = opportunities.filter(opportunity => opportunity.score <= options.scoreMax!);
+    }
+    
+    if (options.serpMatch !== undefined) {
+      opportunities = opportunities.filter(opportunity => opportunity.serpMatch === options.serpMatch);
+    }
+    
+    if (options.action) {
+      opportunities = opportunities.filter(opportunity => opportunity.action === options.action);
+    }
+    
+    // Apply sorting
+    if (options.sortBy) {
+      opportunities.sort((a, b) => {
+        const aValue = a[options.sortBy as keyof Opportunity];
+        const bValue = b[options.sortBy as keyof Opportunity];
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          return options.sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+        }
+        
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          return options.sortDirection === 'asc' 
+            ? aValue.localeCompare(bValue) 
+            : bValue.localeCompare(aValue);
+        }
+        
+        return 0;
+      });
+    } else {
+      // Default sort by score descending
+      opportunities.sort((a, b) => b.score - a.score);
+    }
+    
+    // Apply pagination
+    if (options.limit && options.offset !== undefined) {
+      opportunities = opportunities.slice(options.offset, options.offset + options.limit);
+    } else if (options.limit) {
+      opportunities = opportunities.slice(0, options.limit);
+    }
+    
+    return opportunities;
+  }
+
+  async getOpportunityById(id: number): Promise<Opportunity | undefined> {
+    return this.opportunities.get(id);
+  }
+
+  async getOpportunitiesByThreadId(threadId: number): Promise<Opportunity[]> {
+    return Array.from(this.opportunities.values()).filter(
+      opportunity => opportunity.threadId === threadId
+    );
+  }
+
+  async createOpportunity(insertOpportunity: InsertOpportunity): Promise<Opportunity> {
+    const id = this.currentOpportunityId++;
+    const now = new Date();
+    const opportunity: Opportunity = {
+      ...insertOpportunity,
+      id,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.opportunities.set(id, opportunity);
+    return opportunity;
+  }
+
+  async updateOpportunity(id: number, opportunityUpdate: Partial<InsertOpportunity>): Promise<Opportunity | undefined> {
+    const opportunity = this.opportunities.get(id);
+    if (!opportunity) {
+      return undefined;
+    }
+    
+    const now = new Date();
+    const updatedOpportunity: Opportunity = {
+      ...opportunity,
+      ...opportunityUpdate,
+      updatedAt: now
+    };
+    
+    this.opportunities.set(id, updatedOpportunity);
+    return updatedOpportunity;
+  }
+
+  async deleteOpportunity(id: number): Promise<boolean> {
+    return this.opportunities.delete(id);
+  }
+
+  // SERP Results methods
+  async getSerpResults(): Promise<SerpResult[]> {
+    return Array.from(this.serpResults.values());
+  }
+
+  async getSerpResultById(id: number): Promise<SerpResult | undefined> {
+    return this.serpResults.get(id);
+  }
+
+  async getSerpResultsByThreadId(threadId: number): Promise<SerpResult[]> {
+    return Array.from(this.serpResults.values()).filter(
+      serpResult => serpResult.threadId === threadId
+    );
+  }
+
+  async createSerpResult(insertSerpResult: InsertSerpResult): Promise<SerpResult> {
+    const id = this.currentSerpResultId++;
+    const now = new Date();
+    const serpResult: SerpResult = {
+      ...insertSerpResult,
+      id,
+      checkedAt: now
+    };
+    this.serpResults.set(id, serpResult);
+    return serpResult;
+  }
+
+  async updateSerpResult(id: number, serpResultUpdate: Partial<InsertSerpResult>): Promise<SerpResult | undefined> {
+    const serpResult = this.serpResults.get(id);
+    if (!serpResult) {
+      return undefined;
+    }
+    
+    const updatedSerpResult: SerpResult = {
+      ...serpResult,
+      ...serpResultUpdate
+    };
+    
+    this.serpResults.set(id, updatedSerpResult);
+    return updatedSerpResult;
+  }
+
+  async deleteSerpResult(id: number): Promise<boolean> {
+    return this.serpResults.delete(id);
+  }
+
+  // Refresh opportunities
+  async refreshOpportunities(): Promise<number> {
+    // Get all threads
+    const threads = await this.getThreads();
+    let count = 0;
+    
+    // Analyze each thread and create or update opportunities
+    for (const thread of threads) {
+      // Check if there's an existing opportunity for this thread
+      const existingOpportunities = await this.getOpportunitiesByThreadId(thread.id);
+      
+      if (existingOpportunities.length === 0) {
+        // Create a new opportunity
+        const matchedProgramIds: number[] = [];
+        
+        // Find affiliate programs that match this thread
+        const affiliatePrograms = await this.getAffiliatePrograms();
+        for (const program of affiliatePrograms) {
+          // Check if any keywords match
+          if (program.keywords.some(keyword => thread.matchedKeywords.includes(keyword))) {
+            matchedProgramIds.push(program.id);
+          }
+        }
+        
+        // Create the opportunity with a score based on thread attributes
+        await this.createOpportunity({
+          threadId: thread.id,
+          score: thread.score,
+          intent: thread.intentType || undefined,
+          matchedProgramIds,
+          serpMatch: thread.hasSerp,
+          action: "pending"
+        });
+        
+        count++;
+      } else {
+        // Update existing opportunity
+        const opportunity = existingOpportunities[0];
+        const matchedProgramIds: number[] = [];
+        
+        // Find affiliate programs that match this thread
+        const affiliatePrograms = await this.getAffiliatePrograms();
+        for (const program of affiliatePrograms) {
+          // Check if any keywords match
+          if (program.keywords.some(keyword => thread.matchedKeywords.includes(keyword))) {
+            matchedProgramIds.push(program.id);
+          }
+        }
+        
+        // Only update if there are changes
+        if (
+          opportunity.score !== thread.score ||
+          opportunity.intent !== thread.intentType ||
+          opportunity.serpMatch !== thread.hasSerp ||
+          JSON.stringify(opportunity.matchedProgramIds) !== JSON.stringify(matchedProgramIds)
+        ) {
+          await this.updateOpportunity(opportunity.id, {
+            score: thread.score,
+            intent: thread.intentType || undefined,
+            matchedProgramIds,
+            serpMatch: thread.hasSerp
+          });
+          
+          count++;
+        }
+      }
+    }
+    
+    return count;
   }
 }
 
