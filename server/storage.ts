@@ -1024,4 +1024,852 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Import the Supabase storage implementation
+import { SupabaseStorage } from './supabase-storage';
+
+// Use Supabase storage if SUPABASE_URL and SUPABASE_KEY are available, otherwise fall back to MemStorage
+import { db } from "./db";
+import { eq, desc, asc, and, like, between, or, sql } from "drizzle-orm";
+import { getAllSubreddits } from "./subredditList";
+import { log } from "./vite";
+
+// DatabaseStorage implementation that uses drizzle-orm directly
+export class DatabaseStorage implements IStorage {
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user || undefined;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(insertUser)
+      .returning();
+    return user;
+  }
+  
+  async getThreads(options: ThreadFilterOptions = {}): Promise<RedditThread[]> {
+    let query = db.select().from(redditThreads);
+    
+    // Apply filters
+    const conditions = [];
+    
+    if (options.subreddit) {
+      conditions.push(eq(redditThreads.subreddit, options.subreddit));
+    }
+    
+    if (options.intentType) {
+      conditions.push(eq(redditThreads.intentType, options.intentType));
+    }
+    
+    if (options.serpRank) {
+      if (options.serpRank === 'Top 3') {
+        conditions.push(and(eq(redditThreads.hasSerp, true), sql`${redditThreads.serpRank} <= 3`));
+      } else if (options.serpRank === 'Top 10') {
+        conditions.push(and(eq(redditThreads.hasSerp, true), sql`${redditThreads.serpRank} <= 10`));
+      } else if (options.serpRank === 'Top 20') {
+        conditions.push(and(eq(redditThreads.hasSerp, true), sql`${redditThreads.serpRank} <= 20`));
+      } else if (options.serpRank === 'No Rank') {
+        conditions.push(or(eq(redditThreads.hasSerp, false), sql`${redditThreads.serpRank} IS NULL`));
+      }
+    }
+    
+    if (options.search) {
+      conditions.push(or(
+        like(redditThreads.title, `%${options.search}%`),
+        like(redditThreads.body, `%${options.search}%`)
+      ));
+    }
+    
+    // Apply all conditions
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    // Apply sorting
+    if (options.sortBy) {
+      const direction = options.sortDirection === 'desc' ? desc : asc;
+      
+      if (options.sortBy === 'upvotes') {
+        query = query.orderBy(direction(redditThreads.upvotes));
+      } else if (options.sortBy === 'commentCount') {
+        query = query.orderBy(direction(redditThreads.commentCount));
+      } else if (options.sortBy === 'createdAt') {
+        query = query.orderBy(direction(redditThreads.createdAt));
+      } else if (options.sortBy === 'score') {
+        query = query.orderBy(direction(redditThreads.score));
+      } else if (options.sortBy === 'serpRank') {
+        query = query.orderBy(direction(redditThreads.serpRank));
+      }
+    } else {
+      // Default sort by createdAt desc
+      query = query.orderBy(desc(redditThreads.createdAt));
+    }
+    
+    // Apply pagination
+    if (options.limit) {
+      query = query.limit(options.limit);
+    }
+    
+    if (options.offset) {
+      query = query.offset(options.offset);
+    }
+    
+    try {
+      const threads = await query;
+      return threads;
+    } catch (error) {
+      log(`Error fetching threads: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return [];
+    }
+  }
+
+  async getThreadById(id: number): Promise<RedditThread | undefined> {
+    try {
+      const [thread] = await db.select().from(redditThreads).where(eq(redditThreads.id, id));
+      return thread || undefined;
+    } catch (error) {
+      log(`Error fetching thread: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async createThread(thread: InsertRedditThread): Promise<RedditThread> {
+    try {
+      const [createdThread] = await db
+        .insert(redditThreads)
+        .values(thread)
+        .returning();
+      return createdThread;
+    } catch (error) {
+      log(`Error creating thread: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      throw new Error(`Failed to create thread: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async updateThread(id: number, thread: Partial<InsertRedditThread>): Promise<RedditThread | undefined> {
+    try {
+      const [updatedThread] = await db
+        .update(redditThreads)
+        .set(thread)
+        .where(eq(redditThreads.id, id))
+        .returning();
+      return updatedThread || undefined;
+    } catch (error) {
+      log(`Error updating thread: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async deleteThread(id: number): Promise<boolean> {
+    try {
+      const [deleted] = await db
+        .delete(redditThreads)
+        .where(eq(redditThreads.id, id))
+        .returning();
+      return !!deleted;
+    } catch (error) {
+      log(`Error deleting thread: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return false;
+    }
+  }
+  
+  async getAffiliatePrograms(): Promise<AffiliateProgram[]> {
+    try {
+      const programs = await db
+        .select()
+        .from(affiliatePrograms)
+        .orderBy(asc(affiliatePrograms.name));
+      return programs;
+    } catch (error) {
+      log(`Error fetching affiliate programs: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return [];
+    }
+  }
+
+  async getAffiliateProgramById(id: number): Promise<AffiliateProgram | undefined> {
+    try {
+      const [program] = await db
+        .select()
+        .from(affiliatePrograms)
+        .where(eq(affiliatePrograms.id, id));
+      return program || undefined;
+    } catch (error) {
+      log(`Error fetching affiliate program: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async createAffiliateProgram(program: InsertAffiliateProgram): Promise<AffiliateProgram> {
+    try {
+      const [createdProgram] = await db
+        .insert(affiliatePrograms)
+        .values(program)
+        .returning();
+      return createdProgram;
+    } catch (error) {
+      log(`Error creating affiliate program: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      throw new Error(`Failed to create affiliate program: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async updateAffiliateProgram(id: number, program: Partial<InsertAffiliateProgram>): Promise<AffiliateProgram | undefined> {
+    try {
+      const [updatedProgram] = await db
+        .update(affiliatePrograms)
+        .set(program)
+        .where(eq(affiliatePrograms.id, id))
+        .returning();
+      return updatedProgram || undefined;
+    } catch (error) {
+      log(`Error updating affiliate program: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async deleteAffiliateProgram(id: number): Promise<boolean> {
+    try {
+      const [deleted] = await db
+        .delete(affiliatePrograms)
+        .where(eq(affiliatePrograms.id, id))
+        .returning();
+      return !!deleted;
+    } catch (error) {
+      log(`Error deleting affiliate program: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return false;
+    }
+  }
+  
+  async getCommentTemplates(): Promise<CommentTemplate[]> {
+    try {
+      const templates = await db
+        .select()
+        .from(commentTemplates)
+        .orderBy(asc(commentTemplates.name));
+      return templates;
+    } catch (error) {
+      log(`Error fetching comment templates: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return [];
+    }
+  }
+
+  async getCommentTemplateById(id: number): Promise<CommentTemplate | undefined> {
+    try {
+      const [template] = await db
+        .select()
+        .from(commentTemplates)
+        .where(eq(commentTemplates.id, id));
+      return template || undefined;
+    } catch (error) {
+      log(`Error fetching comment template: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async getCommentTemplatesByType(type: string): Promise<CommentTemplate[]> {
+    try {
+      const templates = await db
+        .select()
+        .from(commentTemplates)
+        .where(eq(commentTemplates.type, type))
+        .orderBy(asc(commentTemplates.name));
+      return templates;
+    } catch (error) {
+      log(`Error fetching comment templates by type: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return [];
+    }
+  }
+
+  async createCommentTemplate(template: InsertCommentTemplate): Promise<CommentTemplate> {
+    try {
+      const [createdTemplate] = await db
+        .insert(commentTemplates)
+        .values(template)
+        .returning();
+      return createdTemplate;
+    } catch (error) {
+      log(`Error creating comment template: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      throw new Error(`Failed to create comment template: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async updateCommentTemplate(id: number, template: Partial<InsertCommentTemplate>): Promise<CommentTemplate | undefined> {
+    try {
+      const [updatedTemplate] = await db
+        .update(commentTemplates)
+        .set(template)
+        .where(eq(commentTemplates.id, id))
+        .returning();
+      return updatedTemplate || undefined;
+    } catch (error) {
+      log(`Error updating comment template: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async deleteCommentTemplate(id: number): Promise<boolean> {
+    try {
+      const [deleted] = await db
+        .delete(commentTemplates)
+        .where(eq(commentTemplates.id, id))
+        .returning();
+      return !!deleted;
+    } catch (error) {
+      log(`Error deleting comment template: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return false;
+    }
+  }
+  
+  async getCrawlHistory(): Promise<CrawlHistory[]> {
+    try {
+      const history = await db
+        .select()
+        .from(crawlHistory)
+        .orderBy(desc(crawlHistory.startedAt));
+      return history;
+    } catch (error) {
+      log(`Error fetching crawl history: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return [];
+    }
+  }
+
+  async getCrawlHistoryById(id: number): Promise<CrawlHistory | undefined> {
+    try {
+      const [history] = await db
+        .select()
+        .from(crawlHistory)
+        .where(eq(crawlHistory.id, id));
+      return history || undefined;
+    } catch (error) {
+      log(`Error fetching crawl history: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async createCrawlHistory(history: InsertCrawlHistory): Promise<CrawlHistory> {
+    try {
+      const [createdHistory] = await db
+        .insert(crawlHistory)
+        .values(history)
+        .returning();
+      return createdHistory;
+    } catch (error) {
+      log(`Error creating crawl history: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      throw new Error(`Failed to create crawl history: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async updateCrawlHistory(id: number, history: Partial<InsertCrawlHistory>): Promise<CrawlHistory | undefined> {
+    try {
+      const [updatedHistory] = await db
+        .update(crawlHistory)
+        .set(history)
+        .where(eq(crawlHistory.id, id))
+        .returning();
+      return updatedHistory || undefined;
+    } catch (error) {
+      log(`Error updating crawl history: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+  
+  async getOpportunities(options: OpportunityFilterOptions = {}): Promise<Opportunity[]> {
+    try {
+      let query = db.select().from(opportunities);
+      
+      // Apply filters
+      const conditions = [];
+      
+      if (options.threadId) {
+        conditions.push(eq(opportunities.threadId, options.threadId));
+      }
+      
+      if (options.intent) {
+        conditions.push(eq(opportunities.intent, options.intent));
+      }
+      
+      if (options.score !== undefined) {
+        conditions.push(eq(opportunities.score, options.score));
+      }
+      
+      if (options.scoreMin !== undefined && options.scoreMax !== undefined) {
+        conditions.push(between(opportunities.score, options.scoreMin, options.scoreMax));
+      } else if (options.scoreMin !== undefined) {
+        conditions.push(sql`${opportunities.score} >= ${options.scoreMin}`);
+      } else if (options.scoreMax !== undefined) {
+        conditions.push(sql`${opportunities.score} <= ${options.scoreMax}`);
+      }
+      
+      if (options.serpMatch !== undefined) {
+        conditions.push(eq(opportunities.serpMatch, options.serpMatch));
+      }
+      
+      if (options.action) {
+        conditions.push(eq(opportunities.action, options.action));
+      }
+      
+      // Apply all conditions
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions));
+      }
+      
+      // Apply sorting
+      if (options.sortBy) {
+        const direction = options.sortDirection === 'desc' ? desc : asc;
+        
+        if (options.sortBy === 'score') {
+          query = query.orderBy(direction(opportunities.score));
+        } else if (options.sortBy === 'createdAt') {
+          query = query.orderBy(direction(opportunities.createdAt));
+        } else if (options.sortBy === 'updatedAt') {
+          query = query.orderBy(direction(opportunities.updatedAt));
+        }
+      } else {
+        // Default sort by score desc
+        query = query.orderBy(desc(opportunities.score));
+      }
+      
+      // Apply pagination
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+      
+      if (options.offset) {
+        query = query.offset(options.offset);
+      }
+      
+      const results = await query;
+      return results;
+    } catch (error) {
+      log(`Error fetching opportunities: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return [];
+    }
+  }
+
+  async getOpportunityById(id: number): Promise<Opportunity | undefined> {
+    try {
+      const [opportunity] = await db
+        .select()
+        .from(opportunities)
+        .where(eq(opportunities.id, id));
+      return opportunity || undefined;
+    } catch (error) {
+      log(`Error fetching opportunity: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async getOpportunitiesByThreadId(threadId: number): Promise<Opportunity[]> {
+    try {
+      const result = await db
+        .select()
+        .from(opportunities)
+        .where(eq(opportunities.threadId, threadId))
+        .orderBy(desc(opportunities.score));
+      return result;
+    } catch (error) {
+      log(`Error fetching opportunities by thread ID: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return [];
+    }
+  }
+
+  async createOpportunity(opportunity: InsertOpportunity): Promise<Opportunity> {
+    try {
+      const [createdOpportunity] = await db
+        .insert(opportunities)
+        .values(opportunity)
+        .returning();
+      return createdOpportunity;
+    } catch (error) {
+      log(`Error creating opportunity: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      throw new Error(`Failed to create opportunity: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async updateOpportunity(id: number, opportunity: Partial<InsertOpportunity>): Promise<Opportunity | undefined> {
+    try {
+      const [updatedOpportunity] = await db
+        .update(opportunities)
+        .set(opportunity)
+        .where(eq(opportunities.id, id))
+        .returning();
+      return updatedOpportunity || undefined;
+    } catch (error) {
+      log(`Error updating opportunity: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async deleteOpportunity(id: number): Promise<boolean> {
+    try {
+      const [deleted] = await db
+        .delete(opportunities)
+        .where(eq(opportunities.id, id))
+        .returning();
+      return !!deleted;
+    } catch (error) {
+      log(`Error deleting opportunity: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return false;
+    }
+  }
+  
+  async getSerpResults(): Promise<SerpResult[]> {
+    try {
+      const results = await db
+        .select()
+        .from(serpResults)
+        .orderBy(desc(serpResults.checkedAt));
+      return results;
+    } catch (error) {
+      log(`Error fetching SERP results: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return [];
+    }
+  }
+
+  async getSerpResultById(id: number): Promise<SerpResult | undefined> {
+    try {
+      const [result] = await db
+        .select()
+        .from(serpResults)
+        .where(eq(serpResults.id, id));
+      return result || undefined;
+    } catch (error) {
+      log(`Error fetching SERP result: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async getSerpResultsByThreadId(threadId: number): Promise<SerpResult[]> {
+    try {
+      const results = await db
+        .select()
+        .from(serpResults)
+        .where(eq(serpResults.threadId, threadId))
+        .orderBy(desc(serpResults.checkedAt));
+      return results;
+    } catch (error) {
+      log(`Error fetching SERP results by thread ID: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return [];
+    }
+  }
+
+  async createSerpResult(serpResult: InsertSerpResult): Promise<SerpResult> {
+    try {
+      const [createdResult] = await db
+        .insert(serpResults)
+        .values(serpResult)
+        .returning();
+      return createdResult;
+    } catch (error) {
+      log(`Error creating SERP result: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      throw new Error(`Failed to create SERP result: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async updateSerpResult(id: number, serpResult: Partial<InsertSerpResult>): Promise<SerpResult | undefined> {
+    try {
+      const [updatedResult] = await db
+        .update(serpResults)
+        .set(serpResult)
+        .where(eq(serpResults.id, id))
+        .returning();
+      return updatedResult || undefined;
+    } catch (error) {
+      log(`Error updating SERP result: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return undefined;
+    }
+  }
+
+  async deleteSerpResult(id: number): Promise<boolean> {
+    try {
+      const [deleted] = await db
+        .delete(serpResults)
+        .where(eq(serpResults.id, id))
+        .returning();
+      return !!deleted;
+    } catch (error) {
+      log(`Error deleting SERP result: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return false;
+    }
+  }
+  
+  async runCrawler(subreddits: string[]): Promise<CrawlHistory> {
+    try {
+      // Create a new crawl history entry
+      const crawlEntry: InsertCrawlHistory = {
+        subreddits: subreddits.length > 0 ? subreddits : getAllSubreddits(),
+        threadCount: 0,
+        status: 'running'
+      };
+      
+      const history = await this.createCrawlHistory(crawlEntry);
+      
+      // Simulate crawling by inserting sample threads
+      const sampleThreads = this.generateSampleThreads(subreddits);
+      
+      // Insert sample threads
+      for (const thread of sampleThreads) {
+        await this.createThread(thread);
+      }
+      
+      // Update crawl history
+      const updatedHistory = await this.updateCrawlHistory(history.id, {
+        threadCount: sampleThreads.length,
+        status: 'completed'
+      });
+      
+      return updatedHistory || history;
+    } catch (error) {
+      log(`Error running crawler: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      throw new Error(`Failed to run crawler: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  
+  async refreshOpportunities(): Promise<number> {
+    try {
+      // Get all threads
+      const threads = await this.getThreads();
+      
+      // Get all affiliate programs
+      const affiliatePrograms = await this.getAffiliatePrograms();
+      
+      let opportunityCount = 0;
+      
+      for (const thread of threads) {
+        // Analyze thread intent
+        const intent = this.classifyThreadIntent(thread);
+        
+        // Find matching keywords
+        const matchedKeywords = this.findMatchingKeywords(thread, affiliatePrograms);
+        
+        // Find matching programs by keywords
+        const matchedProgramIds = affiliatePrograms
+          .filter(program => {
+            const programKeywords = program.keywords as string[];
+            return programKeywords.some(keyword => 
+              matchedKeywords.includes(keyword.toLowerCase())
+            );
+          })
+          .map(program => program.id);
+        
+        // Check if there's a SERP match
+        const serpResults = await this.getSerpResultsByThreadId(thread.id);
+        const hasSerpMatch = serpResults.some(result => result.isRanked);
+        
+        // Calculate score
+        const score = this.calculateThreadScore(
+          thread, 
+          matchedProgramIds, 
+          intent, 
+          hasSerpMatch
+        );
+        
+        // Create or update opportunity
+        const existingOpportunities = await this.getOpportunitiesByThreadId(thread.id);
+        
+        if (existingOpportunities.length > 0) {
+          // Update existing opportunity
+          await this.updateOpportunity(existingOpportunities[0].id, {
+            score,
+            intent,
+            matchedProgramIds,
+            serpMatch: hasSerpMatch
+          });
+        } else {
+          // Create new opportunity
+          await this.createOpportunity({
+            threadId: thread.id,
+            score,
+            intent,
+            matchedProgramIds,
+            serpMatch: hasSerpMatch,
+            action: 'pending'
+          });
+        }
+        
+        // Update thread with intent and matched keywords
+        await this.updateThread(thread.id, {
+          intentType: intent,
+          matchedKeywords: matchedKeywords,
+          affiliateMatch: matchedProgramIds.length
+        });
+        
+        opportunityCount++;
+      }
+      
+      return opportunityCount;
+    } catch (error) {
+      log(`Error refreshing opportunities: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      return 0;
+    }
+  }
+  
+  private classifyThreadIntent(thread: RedditThread): string {
+    const { title, body } = thread;
+    const titleLower = title.toLowerCase();
+    const bodyLower = body.toLowerCase();
+    const content = `${titleLower} ${bodyLower}`;
+    
+    const patterns = {
+      QUESTION: [
+        "what's the best", "what is the best", "recommend", "suggestion", 
+        "looking for", "alternative to", "better than", "vs", "versus",
+        "advice", "help me", "opinion", "review", "worth it", "should i",
+        "?", "how do i", "how to", "anyone use", "anyone tried"
+      ],
+      COMPARISON: [
+        "compare", "vs", "versus", "better than", "difference between",
+        "pros and cons", "advantages", "disadvantages", "best option"
+      ],
+      REVIEW: [
+        "review", "experience with", "worth it", "thoughts on", "anyone use",
+        "using", "tried", "opinions on", "feedback on", "thoughts about"
+      ],
+      DISCOVERY: [
+        "discover", "new", "alternative", "just found", "check out", "hidden gem",
+        "underrated", "discovery", "find", "unknown"
+      ]
+    };
+    
+    // Check for patterns
+    for (const [intent, keywords] of Object.entries(patterns)) {
+      if (keywords.some(keyword => content.includes(keyword))) {
+        return intent;
+      }
+    }
+    
+    // Default to QUESTION if no pattern matches
+    return "QUESTION";
+  }
+
+  private findMatchingKeywords(thread: RedditThread, affiliatePrograms: AffiliateProgram[]): string[] {
+    const { title, body } = thread;
+    const content = `${title.toLowerCase()} ${body.toLowerCase()}`;
+    
+    const matchedKeywords: string[] = [];
+    
+    affiliatePrograms.forEach(program => {
+      const keywords = program.keywords as string[];
+      keywords.forEach(keyword => {
+        if (content.includes(keyword.toLowerCase())) {
+          matchedKeywords.push(keyword.toLowerCase());
+        }
+      });
+    });
+    
+    return [...new Set(matchedKeywords)]; // Remove duplicates
+  }
+
+  private calculateThreadScore(
+    thread: RedditThread, 
+    matchedProgramIds: number[],
+    intent: string,
+    hasSerpMatch: boolean
+  ): number {
+    // Base score
+    let score = 0;
+    
+    // Upvotes factor (max 30 points)
+    if (thread.upvotes >= 100) {
+      score += 30;
+    } else if (thread.upvotes >= 50) {
+      score += 20;
+    } else if (thread.upvotes >= 10) {
+      score += 10;
+    } else {
+      score += 5;
+    }
+    
+    // Comment count factor (max 20 points)
+    if (thread.commentCount >= 50) {
+      score += 20;
+    } else if (thread.commentCount >= 20) {
+      score += 15;
+    } else if (thread.commentCount >= 5) {
+      score += 10;
+    } else {
+      score += 5;
+    }
+    
+    // Affiliate match factor (max 25 points)
+    if (matchedProgramIds.length >= 3) {
+      score += 25;
+    } else if (matchedProgramIds.length === 2) {
+      score += 20;
+    } else if (matchedProgramIds.length === 1) {
+      score += 15;
+    }
+    
+    // Intent factor (max 15 points)
+    if (intent === 'QUESTION') {
+      score += 15;
+    } else if (intent === 'COMPARISON') {
+      score += 12;
+    } else if (intent === 'REVIEW') {
+      score += 10;
+    } else {
+      score += 5;
+    }
+    
+    // SERP match bonus (10 points)
+    if (hasSerpMatch) {
+      score += 10;
+    }
+    
+    return Math.min(score, 100); // Cap at 100
+  }
+  
+  // Helper method to generate sample threads for the crawler simulation
+  private generateSampleThreads(subreddits: string[]): InsertRedditThread[] {
+    const subredditList = subreddits.length > 0 ? subreddits : ['productivity', 'writing', 'Entrepreneur', 'webdev'];
+    
+    const sampleThreads: InsertRedditThread[] = [
+      {
+        title: "Best AI writing tool for content creation in 2023?",
+        body: "I'm looking to scale my content creation and considering AI writing tools like Jasper, Copy.ai, and WriteSonic. Anyone have experience with these? Looking for real-world comparisons beyond their marketing material.\n\nSpecifically:\n1. How much editing is needed after generation?\n2. How does the quality compare between them?\n3. Are they worth the subscription cost?\n\nI write mostly in the tech and digital marketing space if that matters for the algorithm quality.",
+        subreddit: subredditList[Math.floor(Math.random() * subredditList.length)],
+        permalink: `/r/productivity/comments/abc123/best_ai_writing_tool_for_content_creation_in_2023`,
+        upvotes: Math.floor(Math.random() * 100) + 20,
+        commentCount: Math.floor(Math.random() * 40) + 10,
+        author: "content_creator_" + Math.floor(Math.random() * 1000),
+        flair: "Question",
+        matchedKeywords: [],
+        affiliateMatch: 0
+      },
+      {
+        title: "Is SEMrush worth the price for a small blog?",
+        body: "I've been running a small blog for about a year now and looking to step up my SEO game. SEMrush seems to be highly recommended but it's quite expensive. Is it worth the investment for a blog that's making around $500/month?\n\nHas anyone compared it to cheaper alternatives like Ahrefs or more affordable options? What specific features would make the price worthwhile for someone at my level?",
+        subreddit: subredditList[Math.floor(Math.random() * subredditList.length)],
+        permalink: `/r/blogging/comments/def456/is_semrush_worth_the_price_for_a_small_blog`,
+        upvotes: Math.floor(Math.random() * 80) + 10,
+        commentCount: Math.floor(Math.random() * 30) + 5,
+        author: "blog_starter_" + Math.floor(Math.random() * 1000),
+        flair: "SEO Question",
+        matchedKeywords: [],
+        affiliateMatch: 0
+      },
+      {
+        title: "Jasper AI vs Copy.ai - which one gives better results?",
+        body: "I'm trying to choose between Jasper AI and Copy.ai for my marketing agency. We need to create content for various clients across different niches.\n\nHas anyone used both extensively? Which one produces more natural-sounding content? I'm particularly interested in how they handle product descriptions and blog outlines.\n\nAlso, how do they compare in terms of pricing structures and limitations?",
+        subreddit: subredditList[Math.floor(Math.random() * subredditList.length)],
+        permalink: `/r/marketing/comments/ghi789/jasper_ai_vs_copyai_which_one_gives_better_results`,
+        upvotes: Math.floor(Math.random() * 120) + 30,
+        commentCount: Math.floor(Math.random() * 50) + 20,
+        author: "marketing_pro_" + Math.floor(Math.random() * 1000),
+        flair: "Comparison",
+        matchedKeywords: [],
+        affiliateMatch: 0
+      }
+    ];
+    
+    return sampleThreads;
+  }
+}
+
+// Use DatabaseStorage as our primary storage implementation
+export const storage = new DatabaseStorage();
