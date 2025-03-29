@@ -2,8 +2,11 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
+import { trpcMiddleware } from "./trpc";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Add tRPC middleware
+  app.use('/api/trpc', trpcMiddleware);
   // Get all threads with filtering
   app.get("/api/threads", async (req: Request, res: Response) => {
     const { 

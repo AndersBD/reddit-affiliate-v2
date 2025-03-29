@@ -82,8 +82,7 @@ export default function Sidebar({ isMobileOpen }: SidebarProps) {
           </div>
           
           <div className="px-4 space-y-1">
-            <Link href="/">
-              <a className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+            <Link href="/" className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                 location === "/" 
                   ? "text-primary bg-neutral-100" 
                   : "text-neutral-600 hover:text-primary hover:bg-neutral-100"
@@ -94,10 +93,8 @@ export default function Sidebar({ isMobileOpen }: SidebarProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
                 Dashboard
-              </a>
             </Link>
-            <Link href="/opportunities">
-              <a className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+            <Link href="/opportunities" className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                 location === "/opportunities" 
                   ? "text-primary bg-neutral-100" 
                   : "text-neutral-600 hover:text-primary hover:bg-neutral-100"
@@ -108,10 +105,8 @@ export default function Sidebar({ isMobileOpen }: SidebarProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
                 Opportunities
-              </a>
             </Link>
-            <Link href="/settings">
-              <a className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+            <Link href="/settings" className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                 location === "/settings" 
                   ? "text-primary bg-neutral-100" 
                   : "text-neutral-600 hover:text-primary hover:bg-neutral-100"
@@ -123,10 +118,8 @@ export default function Sidebar({ isMobileOpen }: SidebarProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 Settings
-              </a>
             </Link>
-            <Link href="/history">
-              <a className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+            <Link href="/history" className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                 location === "/history" 
                   ? "text-primary bg-neutral-100" 
                   : "text-neutral-600 hover:text-primary hover:bg-neutral-100"
@@ -137,10 +130,8 @@ export default function Sidebar({ isMobileOpen }: SidebarProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 Crawl History
-              </a>
             </Link>
-            <Link href="/programs">
-              <a className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+            <Link href="/programs" className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
                 location === "/programs" 
                   ? "text-primary bg-neutral-100" 
                   : "text-neutral-600 hover:text-primary hover:bg-neutral-100"
@@ -151,7 +142,6 @@ export default function Sidebar({ isMobileOpen }: SidebarProps) {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 Affiliate Programs
-              </a>
             </Link>
           </div>
         </nav>
