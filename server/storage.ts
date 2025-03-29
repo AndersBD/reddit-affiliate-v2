@@ -7,6 +7,7 @@ import {
   opportunities, type Opportunity, type InsertOpportunity,
   serpResults, type SerpResult, type InsertSerpResult
 } from "@shared/schema";
+import { redditCrawlerService } from "./services/redditCrawlerService";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -1609,23 +1610,45 @@ export class DatabaseStorage implements IStorage {
       
       const history = await this.createCrawlHistory(crawlEntry);
       
-      // Simulate crawling by inserting sample threads
-      const sampleThreads = this.generateSampleThreads(subreddits);
+      // Use the real Reddit crawler service to fetch real threads
+      log(`Starting real Reddit crawler for ${crawlEntry.subreddits.length} subreddits`, 'crawler');
+      const crawledThreads = await redditCrawlerService.crawlSubreddits(
+        crawlEntry.subreddits as string[], 
+        5 // Fetch 5 threads per subreddit
+      );
       
-      // Insert sample threads
-      for (const thread of sampleThreads) {
-        await this.createThread(thread);
+      log(`Crawled ${crawledThreads.length} threads from Reddit`, 'crawler');
+      
+      // Insert crawled threads
+      let successCount = 0;
+      for (const thread of crawledThreads) {
+        try {
+          await this.createThread(thread);
+          successCount++;
+        } catch (threadError) {
+          log(`Error inserting thread: ${threadError instanceof Error ? threadError.message : String(threadError)}`, 'crawler');
+          // Continue with other threads even if one fails
+        }
       }
       
       // Update crawl history
       const updatedHistory = await this.updateCrawlHistory(history.id, {
-        threadCount: sampleThreads.length,
+        threadCount: successCount,
         status: 'completed'
       });
       
       return updatedHistory || history;
     } catch (error) {
       log(`Error running crawler: ${error instanceof Error ? error.message : String(error)}`, 'db');
+      
+      // Update the crawl history to mark as failed
+      if (history) {
+        await this.updateCrawlHistory(history.id, {
+          status: 'failed',
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+      
       throw new Error(`Failed to run crawler: ${error instanceof Error ? error.message : String(error)}`);
     }
   }

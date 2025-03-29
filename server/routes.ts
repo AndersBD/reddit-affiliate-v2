@@ -6,6 +6,7 @@ import { trpcMiddleware } from "./trpc";
 import { getAllCategories, getAllSubreddits, getSubredditsByCategory, standardSubreddits } from "./subredditList";
 import { crawlerScheduler } from "./scheduler";
 import { serpCheckService } from "./services/serpCheckService";
+import { log } from "./vite";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add tRPC middleware
@@ -191,7 +192,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? subreddits 
         : getAllSubreddits();
       
+      log(`Starting crawler for subreddits: ${subredditList.join(', ')}`, 'routes');
       const crawlHistory = await storage.runCrawler(subredditList);
+      log(`Crawler completed with ID: ${crawlHistory.id}, threads: ${crawlHistory.threadCount}`, 'routes');
       res.json(crawlHistory);
     } catch (error) {
       console.error("Error running crawler:", error);
