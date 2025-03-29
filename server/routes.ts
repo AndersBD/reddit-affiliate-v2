@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { trpcMiddleware } from "./trpc";
+import { getAllCategories, getAllSubreddits, getSubredditsByCategory, standardSubreddits } from "./subredditList";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add tRPC middleware
@@ -177,12 +178,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/run-crawler", async (req: Request, res: Response) => {
     try {
       const schema = z.object({
-        subreddits: z.array(z.string()).min(1)
+        subreddits: z.array(z.string()).optional()
       });
       
+      // Parse request body and handle missing or empty subreddits array
       const { subreddits } = schema.parse(req.body);
       
-      const crawlHistory = await storage.runCrawler(subreddits);
+      // If no subreddits are provided or the array is empty, use all standard subreddits
+      const subredditList = subreddits && subreddits.length > 0 
+        ? subreddits 
+        : getAllSubreddits();
+      
+      const crawlHistory = await storage.runCrawler(subredditList);
       res.json(crawlHistory);
     } catch (error) {
       console.error("Error running crawler:", error);
@@ -465,6 +472,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error refreshing opportunities:", error);
       res.status(500).json({ message: "Failed to refresh opportunities" });
+    }
+  });
+
+  // Get all subreddit categories
+  app.get("/api/subreddit-categories", async (_req: Request, res: Response) => {
+    try {
+      const categories = getAllCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching subreddit categories:", error);
+      res.status(500).json({ message: "Failed to fetch subreddit categories" });
+    }
+  });
+
+  // Get subreddits by category
+  app.get("/api/subreddit-categories/:category", async (req: Request, res: Response) => {
+    try {
+      const category = req.params.category;
+      const subreddits = getSubredditsByCategory(category);
+      
+      if (!subreddits || subreddits.length === 0) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      
+      res.json(subreddits);
+    } catch (error) {
+      console.error("Error fetching subreddits by category:", error);
+      res.status(500).json({ message: "Failed to fetch subreddits" });
+    }
+  });
+
+  // Get all subreddits 
+  app.get("/api/subreddits", async (_req: Request, res: Response) => {
+    try {
+      const subreddits = getAllSubreddits();
+      res.json(subreddits);
+    } catch (error) {
+      console.error("Error fetching all subreddits:", error);
+      res.status(500).json({ message: "Failed to fetch subreddits" });
     }
   });
 

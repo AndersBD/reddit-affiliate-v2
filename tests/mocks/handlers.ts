@@ -236,18 +236,38 @@ export const handlers = [
 
   // Run crawler endpoint
   http.post('/api/run-crawler', async ({ request }) => {
-    const { subreddits } = await request.json();
-    
-    const newCrawl: CrawlHistory = {
-      id: 3,
-      startedAt: new Date().toISOString(),
-      completedAt: null,
-      threadCount: 0,
-      subreddits,
-      status: 'running'
-    };
-    
-    return HttpResponse.json(newCrawl);
+    try {
+      const body = await request.json();
+      // Checking if body.subreddits exists
+      let subreddits = body?.subreddits;
+      
+      // If subreddits are not provided or empty, use default subreddits
+      if (!subreddits || !Array.isArray(subreddits) || subreddits.length === 0) {
+        // Mock default subreddits (a subset of the full list)
+        subreddits = [
+          "r/artificial", "r/MachineLearning", "r/ChatGPT",
+          "r/SaaS", "r/microsaas", "r/Startups",
+          "r/programming", "r/webdev", "r/coding"
+        ];
+      }
+      
+      const newCrawl: CrawlHistory = {
+        id: 3,
+        startedAt: new Date().toISOString(),
+        completedAt: null,
+        threadCount: 0,
+        subreddits,
+        status: 'running',
+        error: null
+      };
+      
+      return HttpResponse.json(newCrawl);
+    } catch (error) {
+      return HttpResponse.json(
+        { message: "Failed to parse request body" },
+        { status: 400 }
+      );
+    }
   }),
 
   // Opportunities endpoints
@@ -446,5 +466,56 @@ export const handlers = [
   // Refresh opportunities endpoint
   http.post('/api/refresh-opportunities', () => {
     return HttpResponse.json({ count: 5 });
+  }),
+
+  // Subreddit categories endpoints
+  http.get('/api/subreddit-categories', () => {
+    const categories = [
+      "AI & Machine Learning",
+      "SaaS & Startup",
+      "Software Development & Engineering",
+      "No-Code / Automation",
+      "Marketing, SEO & Content Strategy",
+      "Productivity & Knowledge Tools"
+    ];
+    return HttpResponse.json(categories);
+  }),
+
+  http.get('/api/subreddit-categories/:category', ({ params }) => {
+    const category = params.category as string;
+    
+    // Define mock subreddits per category
+    const subredditMap: Record<string, string[]> = {
+      "AI & Machine Learning": ["r/artificial", "r/MachineLearning", "r/ChatGPT"],
+      "SaaS & Startup": ["r/SaaS", "r/microsaas", "r/Startups"],
+      "Software Development & Engineering": ["r/programming", "r/webdev", "r/coding"],
+      "No-Code / Automation": ["r/NoCode", "r/NoCodeDevelopment", "r/automation"],
+      "Marketing, SEO & Content Strategy": ["r/marketing", "r/SEO", "r/content_marketing"],
+      "Productivity & Knowledge Tools": ["r/productivity", "r/Notion", "r/ObsidianMD"]
+    };
+    
+    const subreddits = subredditMap[category];
+    
+    if (!subreddits) {
+      return HttpResponse.json(
+        { message: 'Category not found' },
+        { status: 404 }
+      );
+    }
+    
+    return HttpResponse.json(subreddits);
+  }),
+
+  http.get('/api/subreddits', () => {
+    // Return a flattened list of all subreddits from all categories
+    const allSubreddits = [
+      "r/artificial", "r/MachineLearning", "r/ChatGPT",
+      "r/SaaS", "r/microsaas", "r/Startups",
+      "r/programming", "r/webdev", "r/coding",
+      "r/NoCode", "r/NoCodeDevelopment", "r/automation",
+      "r/marketing", "r/SEO", "r/content_marketing",
+      "r/productivity", "r/Notion", "r/ObsidianMD"
+    ];
+    return HttpResponse.json(allSubreddits);
   })
 ];
