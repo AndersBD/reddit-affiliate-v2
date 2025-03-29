@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { trpcMiddleware } from "./trpc";
 import { getAllCategories, getAllSubreddits, getSubredditsByCategory, standardSubreddits } from "./subredditList";
+import { crawlerScheduler } from "./scheduler";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add tRPC middleware
@@ -514,7 +515,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Start the crawler scheduler
+  app.post("/api/scheduler/start", async (_req: Request, res: Response) => {
+    try {
+      const result = crawlerScheduler.startCrawlerJob();
+      if (result) {
+        res.json({ message: "Crawler job scheduled successfully" });
+      } else {
+        res.status(400).json({ message: "Crawler job is already running" });
+      }
+    } catch (error) {
+      console.error("Error starting crawler job:", error);
+      res.status(500).json({ message: "Failed to start crawler job" });
+    }
+  });
+
+  // Stop the crawler scheduler
+  app.post("/api/scheduler/stop", async (_req: Request, res: Response) => {
+    try {
+      const result = crawlerScheduler.stopCrawlerJob();
+      if (result) {
+        res.json({ message: "Crawler job stopped successfully" });
+      } else {
+        res.status(400).json({ message: "No crawler job is running" });
+      }
+    } catch (error) {
+      console.error("Error stopping crawler job:", error);
+      res.status(500).json({ message: "Failed to stop crawler job" });
+    }
+  });
+
+  // Get the crawler scheduler status
+  app.get("/api/scheduler/status", async (_req: Request, res: Response) => {
+    try {
+      const isRunning = crawlerScheduler.isCrawlerJobRunning();
+      res.json({ 
+        isRunning, 
+        status: isRunning ? "Crawler job is running" : "No crawler job is running" 
+      });
+    } catch (error) {
+      console.error("Error getting crawler job status:", error);
+      res.status(500).json({ message: "Failed to get crawler job status" });
+    }
+  });
+
+  // Run the crawler immediately
+  app.post("/api/scheduler/run-now", async (_req: Request, res: Response) => {
+    try {
+      await crawlerScheduler.runCrawlerNow();
+      res.json({ message: "Crawler job triggered successfully" });
+    } catch (error) {
+      console.error("Error triggering crawler job:", error);
+      res.status(500).json({ message: "Failed to trigger crawler job" });
+    }
+  });
+
+  // Initialize the HTTP server
   const httpServer = createServer(app);
+
+  // Start the crawler scheduler by default
+  crawlerScheduler.startCrawlerJob();
+  console.log("Crawler scheduler started by default");
 
   return httpServer;
 }
