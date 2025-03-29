@@ -5,50 +5,69 @@ using RedditAffiliateEngine.Models;
 
 namespace RedditAffiliateEngine.Repositories
 {
+    /// <summary>
+    /// Repository interface for handling Reddit thread operations
+    /// </summary>
     public interface IRedditThreadRepository
     {
-        Task<List<RedditThread>> GetAllAsync(ThreadFilterOptions options = null);
-        Task<RedditThread> GetByIdAsync(int id);
-        Task<RedditThread> CreateAsync(CreateRedditThreadDto thread);
-        Task<RedditThread> UpdateAsync(int id, Partial<CreateRedditThreadDto> thread);
-        Task<bool> DeleteAsync(int id);
-    }
-}
-
-// Helper class to handle partial updates
-public class Partial<T> where T : class
-{
-    private readonly Dictionary<string, object> _properties = new Dictionary<string, object>();
-
-    public void Set<TValue>(string propertyName, TValue value)
-    {
-        _properties[propertyName] = value;
-    }
-
-    public bool TryGetValue<TValue>(string propertyName, out TValue value)
-    {
-        if (_properties.TryGetValue(propertyName, out var objValue) && objValue is TValue typedValue)
-        {
-            value = typedValue;
-            return true;
-        }
-
-        value = default;
-        return false;
-    }
-
-    public bool HasProperty(string propertyName)
-    {
-        return _properties.ContainsKey(propertyName);
-    }
-
-    public IEnumerable<string> GetPropertyNames()
-    {
-        return _properties.Keys;
-    }
-
-    public IEnumerable<KeyValuePair<string, object>> GetProperties()
-    {
-        return _properties;
+        /// <summary>
+        /// Get all threads with optional filtering
+        /// </summary>
+        Task<List<RedditThread>> GetThreadsAsync(ThreadFilterOptions? options = null);
+        
+        /// <summary>
+        /// Get a thread by its ID
+        /// </summary>
+        Task<RedditThread?> GetThreadByIdAsync(int id);
+        
+        /// <summary>
+        /// Create a new thread
+        /// </summary>
+        Task<RedditThread> CreateThreadAsync(CreateRedditThreadDto thread);
+        
+        /// <summary>
+        /// Update an existing thread
+        /// </summary>
+        Task<RedditThread?> UpdateThreadAsync(int id, UpdateRedditThreadDto thread);
+        
+        /// <summary>
+        /// Delete a thread by its ID
+        /// </summary>
+        Task<bool> DeleteThreadAsync(int id);
+        
+        /// <summary>
+        /// Get threads with opportunities data
+        /// </summary>
+        Task<List<ThreadWithOpportunities>> GetThreadsWithOpportunitiesAsync(ThreadFilterOptions? options = null);
+        
+        /// <summary>
+        /// Get thread with opportunities data
+        /// </summary>
+        Task<ThreadWithOpportunities?> GetThreadWithOpportunitiesAsync(int id);
+        
+        /// <summary>
+        /// Get statistics about threads
+        /// </summary>
+        Task<ThreadStats> GetThreadStatsAsync();
+        
+        /// <summary>
+        /// Search for threads by keywords
+        /// </summary>
+        Task<List<RedditThread>> SearchThreadsAsync(string query, int limit = 10);
+        
+        /// <summary>
+        /// Get threads filtered by intent type
+        /// </summary>
+        Task<List<RedditThread>> GetThreadsByIntentAsync(string intentType, int limit = 20);
+        
+        /// <summary>
+        /// Get threads that match an affiliate program
+        /// </summary>
+        Task<List<RedditThread>> GetThreadsByAffiliateProgramAsync(int programId, int limit = 20);
+        
+        /// <summary>
+        /// Check if a thread already exists by permalink
+        /// </summary>
+        Task<bool> ThreadExistsByPermalinkAsync(string permalink);
     }
 }

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { trpcMiddleware } from "./trpc";
 import { getAllCategories, getAllSubreddits, getSubredditsByCategory, standardSubreddits } from "./subredditList";
 import { crawlerScheduler } from "./scheduler";
+import { serpCheckService } from "./services/serpCheckService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Add tRPC middleware
@@ -567,6 +568,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error triggering crawler job:", error);
       res.status(500).json({ message: "Failed to trigger crawler job" });
+    }
+  });
+
+  // Check SERP position for a thread
+  app.post("/api/check-serp-position", async (req: Request, res: Response) => {
+    try {
+      const schema = z.object({
+        threadId: z.number(),
+        query: z.string().optional()
+      });
+      
+      const serpCheckRequest = schema.parse(req.body);
+      
+      const response = await serpCheckService.checkSerpPosition(serpCheckRequest);
+      res.json(response);
+    } catch (error) {
+      console.error("Error checking SERP position:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid request data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to check SERP position" });
     }
   });
 
