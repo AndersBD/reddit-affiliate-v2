@@ -1,4 +1,4 @@
-import { rest } from 'msw';
+import { http, HttpResponse } from 'msw';
 import type { RedditThread, AffiliateProgram, CommentTemplate, CrawlHistory } from '../../client/src/lib/types';
 
 // Sample data for tests
@@ -103,77 +103,64 @@ export const sampleCrawlHistory: CrawlHistory[] = [
 // API handler definitions for MSW
 export const handlers = [
   // Threads endpoints
-  rest.get('/api/threads', (req, res, ctx) => {
+  http.get('/api/threads', ({ request }) => {
     // Support query parameters like in our API
-    const subreddit = req.url.searchParams.get('subreddit');
+    const url = new URL(request.url);
+    const subreddit = url.searchParams.get('subreddit');
     
     let filteredThreads = [...sampleThreads];
     if (subreddit) {
       filteredThreads = filteredThreads.filter(thread => thread.subreddit === subreddit);
     }
     
-    return res(
-      ctx.status(200),
-      ctx.json({
-        threads: filteredThreads,
-        total: filteredThreads.length,
-        limit: 10,
-        offset: 0
-      })
-    );
+    return HttpResponse.json({
+      threads: filteredThreads,
+      total: filteredThreads.length,
+      limit: 10,
+      offset: 0
+    });
   }),
 
-  rest.get('/api/threads/:id', (req, res, ctx) => {
-    const { id } = req.params;
+  http.get('/api/threads/:id', ({ params }) => {
+    const id = params.id;
     const thread = sampleThreads.find(t => t.id === parseInt(id as string));
     
     if (!thread) {
-      return res(
-        ctx.status(404),
-        ctx.json({ message: 'Thread not found' })
+      return HttpResponse.json(
+        { message: 'Thread not found' },
+        { status: 404 }
       );
     }
     
-    return res(
-      ctx.status(200),
-      ctx.json(thread)
-    );
+    return HttpResponse.json(thread);
   }),
 
   // Affiliate Programs endpoints
-  rest.get('/api/affiliate-programs', (_req, res, ctx) => {
-    return res(
-      ctx.status(200),
-      ctx.json(sampleAffiliatePrograms)
-    );
+  http.get('/api/affiliate-programs', () => {
+    return HttpResponse.json(sampleAffiliatePrograms);
   }),
 
   // Comment Templates endpoints
-  rest.get('/api/comment-templates', (req, res, ctx) => {
-    const type = req.url.searchParams.get('type');
+  http.get('/api/comment-templates', ({ request }) => {
+    const url = new URL(request.url);
+    const type = url.searchParams.get('type');
     
     let filteredTemplates = [...sampleCommentTemplates];
     if (type) {
       filteredTemplates = filteredTemplates.filter(template => template.type === type);
     }
     
-    return res(
-      ctx.status(200),
-      ctx.json(filteredTemplates)
-    );
+    return HttpResponse.json(filteredTemplates);
   }),
 
   // Crawl history endpoints
-  rest.get('/api/crawl-history', (_req, res, ctx) => {
-    return res(
-      ctx.status(200),
-      ctx.json(sampleCrawlHistory)
-    );
+  http.get('/api/crawl-history', () => {
+    return HttpResponse.json(sampleCrawlHistory);
   }),
 
   // Generate comment endpoint
-  rest.post('/api/generate-comment', async (req, res, ctx) => {
-    const { threadId, affiliateProgramId, templateId } = await req.json();
+  http.post('/api/generate-comment', async ({ request }) => {
+    const { threadId, affiliateProgramId, templateId } = await request.json();
     
     // Get the relevant objects
     const thread = sampleThreads.find(t => t.id === threadId);
@@ -181,29 +168,24 @@ export const handlers = [
     const template = sampleCommentTemplates.find(t => t.id === templateId);
     
     if (!thread || !program || !template) {
-      return res(
-        ctx.status(404),
-        ctx.json({ 
-          message: `${!thread ? 'Thread' : !program ? 'Affiliate program' : 'Template'} not found` 
-        })
+      return HttpResponse.json(
+        { message: `${!thread ? 'Thread' : !program ? 'Affiliate program' : 'Template'} not found` },
+        { status: 404 }
       );
     }
 
     let comment = template.template;
-    comment = comment.replaceAll('{{program}}', program.name);
-    comment = comment.replaceAll('{{link}}', program.link);
-    comment = comment.replaceAll('{{promo_code}}', program.promoCode || '');
-    comment = comment.replaceAll('{{benefit}}', 'It has specialized templates for blog posts and articles');
+    comment = comment.replace(/\{\{program\}\}/g, program.name);
+    comment = comment.replace(/\{\{link\}\}/g, program.link);
+    comment = comment.replace(/\{\{promo_code\}\}/g, program.promoCode || '');
+    comment = comment.replace(/\{\{benefit\}\}/g, 'It has specialized templates for blog posts and articles');
     
-    return res(
-      ctx.status(200),
-      ctx.json({ comment })
-    );
+    return HttpResponse.json({ comment });
   }),
 
   // Run crawler endpoint
-  rest.post('/api/run-crawler', async (req, res, ctx) => {
-    const { subreddits } = await req.json();
+  http.post('/api/run-crawler', async ({ request }) => {
+    const { subreddits } = await request.json();
     
     const newCrawl: CrawlHistory = {
       id: 3,
@@ -214,9 +196,6 @@ export const handlers = [
       status: 'running'
     };
     
-    return res(
-      ctx.status(200),
-      ctx.json(newCrawl)
-    );
+    return HttpResponse.json(newCrawl);
   })
 ];
