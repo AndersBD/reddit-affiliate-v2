@@ -790,36 +790,209 @@ export class MemStorage implements IStorage {
   }
 
   // Refresh opportunities
+  /**
+   * Classifies the intent of a thread based on its title and body
+   * @param thread The Reddit thread to classify
+   * @returns The intent type (DISCOVERY, COMPARISON, QUESTION, SHOWCASE)
+   */
+  private classifyThreadIntent(thread: RedditThread): string {
+    const text = `${thread.title} ${thread.body}`.toLowerCase();
+    
+    // Check for comparison intent
+    if (
+      text.includes('vs') || 
+      text.includes('versus') || 
+      text.includes('compare') || 
+      text.includes('better than') ||
+      text.includes('alternative to') ||
+      /which (?:one|tool|software|service|app) (?:is|should)/i.test(text) ||
+      /(?:difference|differences) between/i.test(text)
+    ) {
+      return 'COMPARISON';
+    }
+    
+    // Check for question intent
+    if (
+      text.includes('?') || 
+      text.startsWith('how') || 
+      text.startsWith('what') || 
+      text.startsWith('why') ||
+      text.startsWith('when') ||
+      text.startsWith('where') ||
+      text.startsWith('who') ||
+      text.startsWith('can someone') ||
+      text.startsWith('does anyone')
+    ) {
+      return 'QUESTION';
+    }
+    
+    // Check for showcase intent
+    if (
+      text.includes('i made') || 
+      text.includes('just launched') || 
+      text.includes('created this') ||
+      text.includes('built a') ||
+      text.includes('my project') ||
+      text.includes('showcase') ||
+      text.includes('look what i') ||
+      text.includes('check out my')
+    ) {
+      return 'SHOWCASE';
+    }
+    
+    // Default to discovery intent
+    return 'DISCOVERY';
+  }
+  
+  /**
+   * Finds keywords in a thread that match with affiliate program keywords
+   * @param thread The Reddit thread to check
+   * @param affiliatePrograms List of affiliate programs to match against
+   * @returns Array of matched keywords
+   */
+  private findMatchingKeywords(thread: RedditThread, affiliatePrograms: AffiliateProgram[]): string[] {
+    const text = `${thread.title} ${thread.body}`.toLowerCase();
+    const matchedKeywords: string[] = [];
+    
+    // Check each affiliate program's keywords
+    for (const program of affiliatePrograms) {
+      // Check program name directly (common case for products like "Jasper AI")
+      if (text.includes(program.name.toLowerCase()) && !matchedKeywords.includes(program.name)) {
+        matchedKeywords.push(program.name);
+      }
+      
+      // Check each program keyword
+      for (const keyword of program.keywords) {
+        if (text.includes(keyword.toLowerCase()) && !matchedKeywords.includes(keyword)) {
+          matchedKeywords.push(keyword);
+        }
+      }
+      
+      // Check for variations with/without spaces or "AI" suffix (common patterns)
+      // For example, match "JasperAI" with "Jasper AI" or "Jasper" with "Jasper AI"
+      const nameWithoutSpaces = program.name.replace(/\s+/g, '').toLowerCase();
+      const nameWithoutAI = program.name.replace(/\s*AI\s*$/i, '').toLowerCase();
+      
+      if (text.includes(nameWithoutSpaces) && 
+          !matchedKeywords.includes(program.name) && 
+          nameWithoutSpaces !== program.name.toLowerCase()) {
+        matchedKeywords.push(program.name);
+      }
+      
+      if (text.includes(nameWithoutAI) && 
+          !matchedKeywords.includes(program.name) && 
+          nameWithoutAI !== program.name.toLowerCase()) {
+        matchedKeywords.push(program.name);
+      }
+    }
+    
+    return matchedKeywords;
+  }
+  
+  /**
+   * Calculates a score for a thread based on various factors
+   * @param thread The Reddit thread to score
+   * @param matchedProgramIds Array of matched affiliate program IDs
+   * @param intent The classified intent type
+   * @param hasSerpMatch Whether the thread has a SERP match
+   * @returns A score between 0 and 100
+   */
+  private calculateThreadScore(
+    thread: RedditThread, 
+    matchedProgramIds: number[], 
+    intent: string, 
+    hasSerpMatch: boolean
+  ): number {
+    let score = 0;
+    
+    // Base score from upvotes (max 30 points)
+    score += Math.min(thread.upvotes / 10, 30);
+    
+    // Intent score (max 20 points)
+    switch (intent) {
+      case 'DISCOVERY':
+        score += 20;
+        break;
+      case 'COMPARISON':
+        score += 15;
+        break;
+      case 'QUESTION':
+        score += 10;
+        break;
+      case 'SHOWCASE':
+        score += 5;
+        break;
+    }
+    
+    // Affiliate match score (max 30 points)
+    score += Math.min(matchedProgramIds.length * 10, 30);
+    
+    // SERP score (20 points)
+    if (hasSerpMatch) {
+      score += 20;
+    }
+    
+    // Cap the score at 100
+    return Math.min(Math.round(score), 100);
+  }
+  
   async refreshOpportunities(): Promise<number> {
     // Get all threads
     const threads = await this.getThreads();
     let count = 0;
     
+    // Get all affiliate programs for matching
+    const affiliatePrograms = await this.getAffiliatePrograms();
+    
     // Analyze each thread and create or update opportunities
     for (const thread of threads) {
+      // Find matching keywords for this thread
+      const matchedKeywords = this.findMatchingKeywords(thread, affiliatePrograms);
+      
+      // Get matched program IDs
+      const matchedProgramIds: number[] = [];
+      for (const program of affiliatePrograms) {
+        // Check if program name is in matched keywords
+        if (matchedKeywords.includes(program.name)) {
+          matchedProgramIds.push(program.id);
+          continue;
+        }
+        
+        // Check if any program keywords are in matched keywords
+        if (program.keywords.some(keyword => matchedKeywords.includes(keyword))) {
+          matchedProgramIds.push(program.id);
+        }
+      }
+      
+      // Classify thread intent
+      const intent = this.classifyThreadIntent(thread);
+      
+      // Check for SERP match
+      const serpResults = await this.getSerpResultsByThreadId(thread.id);
+      const hasSerpMatch = serpResults.length > 0 && serpResults.some(result => result.position !== null && result.position <= 10);
+      
+      // Calculate thread score
+      const score = this.calculateThreadScore(thread, matchedProgramIds, intent, hasSerpMatch);
+      
+      // Update thread with new information
+      await this.updateThread(thread.id, {
+        intentType: intent,
+        matchedKeywords,
+        hasSerp: hasSerpMatch,
+        score
+      });
+      
       // Check if there's an existing opportunity for this thread
       const existingOpportunities = await this.getOpportunitiesByThreadId(thread.id);
       
       if (existingOpportunities.length === 0) {
         // Create a new opportunity
-        const matchedProgramIds: number[] = [];
-        
-        // Find affiliate programs that match this thread
-        const affiliatePrograms = await this.getAffiliatePrograms();
-        for (const program of affiliatePrograms) {
-          // Check if any keywords match
-          if (program.keywords.some(keyword => thread.matchedKeywords.includes(keyword))) {
-            matchedProgramIds.push(program.id);
-          }
-        }
-        
-        // Create the opportunity with a score based on thread attributes
         await this.createOpportunity({
           threadId: thread.id,
-          score: thread.score,
-          intent: thread.intentType || undefined,
+          score,
+          intent,
           matchedProgramIds,
-          serpMatch: thread.hasSerp,
+          serpMatch: hasSerpMatch,
           action: "pending"
         });
         
@@ -827,29 +1000,19 @@ export class MemStorage implements IStorage {
       } else {
         // Update existing opportunity
         const opportunity = existingOpportunities[0];
-        const matchedProgramIds: number[] = [];
-        
-        // Find affiliate programs that match this thread
-        const affiliatePrograms = await this.getAffiliatePrograms();
-        for (const program of affiliatePrograms) {
-          // Check if any keywords match
-          if (program.keywords.some(keyword => thread.matchedKeywords.includes(keyword))) {
-            matchedProgramIds.push(program.id);
-          }
-        }
         
         // Only update if there are changes
         if (
-          opportunity.score !== thread.score ||
-          opportunity.intent !== thread.intentType ||
-          opportunity.serpMatch !== thread.hasSerp ||
+          opportunity.score !== score ||
+          opportunity.intent !== intent ||
+          opportunity.serpMatch !== hasSerpMatch ||
           JSON.stringify(opportunity.matchedProgramIds) !== JSON.stringify(matchedProgramIds)
         ) {
           await this.updateOpportunity(opportunity.id, {
-            score: thread.score,
-            intent: thread.intentType || undefined,
+            score,
+            intent,
             matchedProgramIds,
-            serpMatch: thread.hasSerp
+            serpMatch: hasSerpMatch
           });
           
           count++;
