@@ -1,0 +1,103 @@
+✅ Immediate Next Steps:
+1. Build the Full Frontend UI (React + Next.js)
+Use your repo reddit-revenue-hub as the UI base and connect it to the new backend.
+
+Key Views to Implement:
+🏠 Home / Dashboard
+
+Metrics: Upvotes, CTR, Conversions
+
+Top Opportunities (ranked)
+
+Recent Threads Crawled
+
+📂 Subreddits & Niche Setup
+
+Select or categorize subreddits
+
+Add affiliate links, promo codes
+
+Match affiliate programs to niches
+
+📈 Keyword & Thread Discovery
+
+Trending keywords (from crawler / Keyworddit)
+
+Popular Reddit threads (from backend)
+
+SERP results (if fetched)
+
+🤖 AI Content Generation
+
+Form to generate Reddit-style posts/comments
+
+Preview formatting
+
+Tone/purpose (e.g., Discovery, Comparison, Review)
+
+📆 Post Scheduling
+
+Calendar view or time slots
+
+Rotating account simulation (mock for now)
+
+Anti-spam spacing logic
+
+📊 Analytics
+
+Opportunity score trends
+
+CTR heatmaps, post conversion stats
+
+Suggest next best action (e.g., repost, rewrite)
+
+2. API Integration Layer
+Create a lib/api.ts or hooks/useApi.ts in the frontend to call:
+
+Endpoint	Purpose
+GET /api/opportunities	Load opportunity list
+GET /api/threads	Display discovered threads
+GET /api/affiliate-programs	Show affiliate data
+POST /api/run-crawler	Manually start crawler
+POST /api/refresh-opportunities	Trigger opportunity refresh
+GET /api/scheduler/status	Cron job status
+3. State & Data Fetching (tRPC or SWR/React Query)
+Use React Query or tRPC for:
+
+Caching data (e.g., opportunity list)
+
+Revalidating after a crawler run
+
+Loading/success/error UX
+
+4. Design & Component Library
+Use TailwindCSS for layout and styling
+
+Consider using shadcn/ui or Radix UI for:
+
+Tabs
+
+Tables
+
+Date Pickers
+
+Modals
+
+5. Seed Data Setup
+To allow testing the frontend:
+
+Use .sql or .ts scripts to insert:
+
+Sample affiliate programs (e.g., Jasper AI, WriteSonic)
+
+5–10 Reddit threads (mocked titles/content)
+
+Fake SERP results and opportunity scores
+
+📌 Summary of What’s Next
+Priority	Task
+🎯 High	Connect new frontend to .NET backend
+🎯 High	Build Dashboard UI & modular views
+✅ Medium	Add typed API client in frontend
+⚙️ Medium	Add React Query or tRPC
+🧪 Optional	Add UI tests (e.g., Playwright or Vitest + React Testing Lib)

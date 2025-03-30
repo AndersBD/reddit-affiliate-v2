@@ -1,136 +1,347 @@
-import { useState } from "react";
+import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
-import FilterPanel from "@/components/FilterPanel";
-import OpportunityList from "@/components/OpportunityList";
-import ThreadPreviewModal from "@/components/ThreadPreviewModal";
-import { RedditThread, ThreadFilterOptions } from "@/lib/types";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { DashboardLayout } from "@/components/dashboard/Layout";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowUpRight, BarChart2, RefreshCw, TrendingUp, Users } from "lucide-react";
+import { formatDate, formatNumber, truncateText } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
 
-export default function Dashboard() {
-  const [selectedThread, setSelectedThread] = useState<RedditThread | null>(null);
-  const [filters, setFilters] = useState<ThreadFilterOptions>({
-    limit: 10,
-    offset: 0,
-  });
-  const [isModalOpen, setIsModalOpen] = useState(false);
+// Helper function to fetch dashboard data
+interface DashboardStats {
+  totalThreads: number;
+  totalOpportunities: number;
+  averageScore: number;
+  conversionsEstimate: number;
+}
 
-  // Build query string from filters
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
-    
-    if (filters.subreddit) params.append("subreddit", filters.subreddit);
-    if (filters.intentType) params.append("intentType", filters.intentType);
-    if (filters.serpRank) params.append("serpRank", filters.serpRank);
-    if (filters.affiliateProgram) params.append("affiliateProgram", filters.affiliateProgram);
-    if (filters.search) params.append("search", filters.search);
-    if (filters.limit) params.append("limit", filters.limit.toString());
-    if (filters.offset) params.append("offset", filters.offset.toString());
-    if (filters.sortBy) params.append("sortBy", filters.sortBy);
-    if (filters.sortDirection) params.append("sortDirection", filters.sortDirection);
-    
-    return params.toString();
-  };
+// Types
+interface Thread {
+  id: number;
+  title: string;
+  subreddit: string;
+  upvotes: number;
+  commentCount: number;
+  crawledAt: string;
+  score?: number;
+  intentType?: string | null;
+}
 
+interface Opportunity {
+  id: number;
+  threadId: number;
+  thread?: Thread;
+  score: number;
+  intent: string | null;
+  createdAt: string;
+  action: string | null;
+}
+
+interface ThreadsResponse {
+  threads: Thread[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+interface OpportunitiesResponse {
+  opportunities: Opportunity[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+function DashboardPage() {
   // Fetch threads
-  const { data, isLoading, error } = useQuery({
-    queryKey: [`/api/threads?${buildQueryString()}`],
+  const { data: threadsData, isLoading: threadsLoading } = useQuery<ThreadsResponse>({
+    queryKey: ['/api/threads'],
+    staleTime: 60 * 1000,
   });
 
-  // Handle opening the thread preview modal
-  const handleThreadClick = (thread: RedditThread) => {
-    setSelectedThread(thread);
-    setIsModalOpen(true);
+  // Fetch opportunities
+  const { data: opportunitiesData, isLoading: opportunitiesLoading } = useQuery<OpportunitiesResponse>({
+    queryKey: ['/api/opportunities'],
+    staleTime: 60 * 1000,
+  });
+
+  // Extract threads and opportunities arrays from the response
+  const threads = threadsData?.threads || [];
+  const opportunities = opportunitiesData?.opportunities || [];
+
+  // Calculate dashboard stats
+  const stats: DashboardStats = React.useMemo(() => {
+    if (threads.length === 0 || opportunities.length === 0) {
+      return {
+        totalThreads: threads.length,
+        totalOpportunities: opportunities.length,
+        averageScore: 0,
+        conversionsEstimate: 0,
+      };
+    }
+    
+    const totalThreads = threads.length;
+    const totalOpportunities = opportunities.length;
+    
+    // Calculate average score of opportunities
+    const totalScore = opportunities.reduce((acc, opp) => acc + opp.score, 0);
+    const averageScore = totalOpportunities > 0 ? totalScore / totalOpportunities : 0;
+    
+    // Estimate potential conversions (simplified calculation)
+    const conversionsEstimate = Math.round(totalOpportunities * (averageScore / 100) * 0.05);
+    
+    return {
+      totalThreads,
+      totalOpportunities,
+      averageScore,
+      conversionsEstimate,
+    };
+  }, [threads, opportunities]);
+  
+  // Handle refresh opportunities
+  const handleRefreshOpportunities = async () => {
+    try {
+      await apiRequest('POST', '/api/refresh-opportunities');
+      // Invalidate queries to refresh data
+      // queryClient.invalidateQueries({ queryKey: ['/api/opportunities'] });
+      // queryClient.invalidateQueries({ queryKey: ['/api/threads'] });
+    } catch (error) {
+      console.error('Failed to refresh opportunities:', error);
+    }
   };
 
-  // Handle closing the thread preview modal
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+  // Get top opportunities
+  const topOpportunities = React.useMemo(() => {
+    if (!opportunities || !Array.isArray(opportunities)) return [];
+    return [...opportunities]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+  }, [opportunities]);
 
-  // Handle filter changes
-  const handleFilterChange = (newFilters: Partial<ThreadFilterOptions>) => {
-    setFilters({
-      ...filters,
-      ...newFilters,
-      // Reset pagination when filters change
-      offset: 0
-    });
-  };
-
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    const newOffset = (newPage - 1) * (filters.limit || 10);
-    setFilters({
-      ...filters,
-      offset: newOffset
-    });
-  };
+  // Get recent threads
+  const recentThreads = React.useMemo(() => {
+    if (!threads || !Array.isArray(threads)) return [];
+    return [...threads]
+      .sort((a, b) => new Date(b.crawledAt).getTime() - new Date(a.crawledAt).getTime())
+      .slice(0, 5);
+  }, [threads]);
 
   return (
-    <main className="flex-1 relative overflow-y-auto focus:outline-none">
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-            <h1 className="text-2xl font-semibold text-neutral-900">Affiliate Opportunities</h1>
-            <div className="mt-3 md:mt-0">
-              <div className="inline-flex rounded-md shadow-sm">
-                <button 
-                  type="button" 
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-l-md text-neutral-700 bg-white hover:bg-neutral-50 border border-neutral-300"
-                  onClick={() => handleFilterChange({ sortBy: undefined })}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                  </svg>
-                  All
-                </button>
-                <button 
-                  type="button" 
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium text-neutral-700 bg-white hover:bg-neutral-50 border-t border-b border-neutral-300"
-                  onClick={() => handleFilterChange({ sortBy: "score", sortDirection: "desc" })}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                  </svg>
-                  Top Scoring
-                </button>
-                <button 
-                  type="button" 
-                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-r-md text-neutral-700 bg-white hover:bg-neutral-50 border border-neutral-300"
-                  onClick={() => handleFilterChange({ serpRank: "Top 10" })}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                  </svg>
-                  Google Ranked
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <FilterPanel 
-            filters={filters}
-            onFilterChange={handleFilterChange}
-          />
-          
-          <OpportunityList 
-            isLoading={isLoading}
-            error={error}
-            data={data}
-            onThreadClick={handleThreadClick}
-            onPageChange={handlePageChange}
-            currentOffset={filters.offset || 0}
-            pageSize={filters.limit || 10}
-          />
-        </div>
+    <DashboardLayout>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold md:text-2xl">Dashboard</h1>
+        <Button 
+          onClick={handleRefreshOpportunities}
+          className="gap-1"
+        >
+          <RefreshCw className="h-4 w-4" />
+          Refresh Opportunities
+        </Button>
       </div>
       
-      {selectedThread && (
-        <ThreadPreviewModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          thread={selectedThread}
+      {/* Metrics Section */}
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <MetricCard 
+          title="Total Threads" 
+          value={stats.totalThreads} 
+          description="Crawled from Reddit" 
+          icon={<Users />}
+          trendValue="+12%"
         />
-      )}
-    </main>
+        <MetricCard 
+          title="Total Opportunities" 
+          value={stats.totalOpportunities} 
+          description="Discovered potential" 
+          icon={<BarChart2 />}
+          trendValue="+5%"
+        />
+        <MetricCard 
+          title="Average Score" 
+          value={stats.averageScore.toFixed(1)} 
+          description="Opportunity quality" 
+          icon={<TrendingUp />}
+          trendValue="+2.4%"
+        />
+        <MetricCard 
+          title="Est. Conversions" 
+          value={stats.conversionsEstimate} 
+          description="Potential monthly" 
+          icon={<ArrowUpRight />}
+          trendValue="+3.1%"
+        />
+      </div>
+
+      {/* Tabs for Opportunities and Threads */}
+      <Tabs defaultValue="opportunities" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="opportunities">Top Opportunities</TabsTrigger>
+          <TabsTrigger value="threads">Recent Threads</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="opportunities" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Highest Scoring Opportunities</CardTitle>
+              <CardDescription>Top affiliate opportunities based on intent and score</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {opportunitiesLoading ? (
+                <div className="flex justify-center p-4">Loading opportunities...</div>
+              ) : topOpportunities.length > 0 ? (
+                <div className="space-y-4">
+                  {topOpportunities.map((opportunity) => (
+                    <OpportunityCard key={opportunity.id} opportunity={opportunity} threads={threads || []} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">No opportunities found</p>
+                  <Button variant="outline" onClick={handleRefreshOpportunities} className="mt-2">
+                    Generate Opportunities
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="threads" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recently Crawled Threads</CardTitle>
+              <CardDescription>Latest threads from Reddit</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {threadsLoading ? (
+                <div className="flex justify-center p-4">Loading threads...</div>
+              ) : recentThreads.length > 0 ? (
+                <div className="space-y-4">
+                  {recentThreads.map((thread) => (
+                    <ThreadCard key={thread.id} thread={thread} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <p className="text-muted-foreground">No threads found</p>
+                  <Button variant="outline" className="mt-2">
+                    Run Crawler
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </DashboardLayout>
   );
 }
+
+interface MetricCardProps {
+  title: string;
+  value: number | string;
+  description: string;
+  icon: React.ReactNode;
+  trendValue?: string;
+}
+
+function MetricCard({ title, value, description, icon, trendValue }: MetricCardProps) {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <div className="flex items-baseline gap-2">
+              <h3 className="text-2xl font-bold">{typeof value === 'number' ? formatNumber(value) : value}</h3>
+              {trendValue && (
+                <span className="text-xs font-medium text-green-500">{trendValue}</span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{description}</p>
+          </div>
+          <div className="rounded-md bg-primary/10 p-2">
+            {React.cloneElement(icon as React.ReactElement, {
+              className: "h-5 w-5 text-primary",
+            })}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OpportunityCard({ opportunity, threads }: { opportunity: Opportunity, threads: Thread[] }) {
+  // Find the thread that this opportunity is associated with
+  const thread = threads.find(t => t.id === opportunity.threadId) || opportunity.thread;
+  
+  if (!thread) {
+    return null;
+  }
+  
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <h3 className="font-medium">{truncateText(thread.title, 80)}</h3>
+          <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+            <span>r/{thread.subreddit}</span>
+            <span>•</span>
+            <span>Score: {opportunity.score}</span>
+            {opportunity.intent && (
+              <>
+                <span>•</span>
+                <span>Intent: {opportunity.intent}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className={`rounded-full px-2 py-1 text-xs font-medium ${opportunity.score > 70 ? 'bg-green-100 text-green-800 dark:bg-green-800/20 dark:text-green-400' : opportunity.score > 40 ? 'bg-amber-100 text-amber-800 dark:bg-amber-800/20 dark:text-amber-400' : 'bg-gray-100 text-gray-800 dark:bg-gray-800/20 dark:text-gray-400'}`}>
+            {opportunity.score > 70 ? 'High' : opportunity.score > 40 ? 'Medium' : 'Low'}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <Button variant="outline" size="sm">
+          View Thread
+        </Button>
+        <Button size="sm">
+          Generate Comment
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ThreadCard({ thread }: { thread: Thread }) {
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <h3 className="font-medium">{truncateText(thread.title, 80)}</h3>
+      <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+        <span>r/{thread.subreddit}</span>
+        <span>•</span>
+        <span>{thread.upvotes} upvotes</span>
+        <span>•</span>
+        <span>{thread.commentCount} comments</span>
+        <span>•</span>
+        <span>Crawled: {formatDate(new Date(thread.crawledAt))}</span>
+      </div>
+      <div className="mt-3 flex justify-end gap-2">
+        <Button variant="outline" size="sm">
+          View Thread
+        </Button>
+        <Button variant="outline" size="sm">
+          Check Opportunity
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export default DashboardPage;
