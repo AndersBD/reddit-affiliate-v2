@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/Dashboard";
 import CrawlerTest from "@/pages/CrawlerTest";
+import Opportunities from "@/pages/Opportunities";
 import { queryClient } from "./lib/queryClient";
 
 function Router() {
@@ -16,7 +17,7 @@ function Router() {
       {/* Add more routes here */}
       <Route path="/subreddits" component={NotFound} />
       <Route path="/keywords" component={NotFound} />
-      <Route path="/opportunities" component={NotFound} />
+      <Route path="/opportunities" component={Opportunities} />
       <Route path="/content" component={NotFound} />
       <Route path="/schedule" component={NotFound} />
       <Route path="/analytics" component={NotFound} />

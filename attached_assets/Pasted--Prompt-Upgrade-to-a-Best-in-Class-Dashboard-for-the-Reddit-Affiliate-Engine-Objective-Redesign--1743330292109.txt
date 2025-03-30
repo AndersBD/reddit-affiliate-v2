@@ -1,0 +1,146 @@
+🧠 Prompt: Upgrade to a Best-in-Class Dashboard for the Reddit Affiliate Engine
+Objective:
+Redesign the current dashboard UI to make it a best-in-class affiliate marketing interface for Reddit automation. Think of it as a combination of a performance analytics tool, Reddit content planner, and AI content assistant — all in one.
+
+✅ Goals
+Professional SaaS UI/UX: Clean, modern design — inspired by tools like Notion, Ahrefs, and Mixpanel.
+
+User Journey Driven: Support the full affiliate workflow:
+
+Niche/Subreddit setup
+
+Keyword/thread discovery
+
+Content generation
+
+Scheduling
+
+Analytics
+
+💻 Layout Specification
+🧭 Sidebar Navigation (Sticky Left)
+Dashboard (Home)
+
+Opportunities
+
+Threads
+
+Affiliate Programs
+
+SERP Matches
+
+Scheduler
+
+Settings
+
+Each section should be a Next.js route.
+
+📊 Main Dashboard Page (/dashboard)
+Use a grid layout with Tailwind CSS (or equivalent utility framework):
+
+Top Row – Key Metrics Cards (4):
+
+Total Opportunities
+
+Avg. Score / Opportunity
+
+CTR % (Placeholder if not yet implemented)
+
+Last Crawler Run Timestamp
+
+⚙️ Data pulled from /api/opportunities, /api/crawl-history, etc.
+
+Middle Section – Tabs Component
+
+Tab 1: 🔥 Top Opportunities
+
+Table with:
+
+Title (linked to Reddit thread)
+
+Subreddit
+
+Score
+
+Intent Type
+
+Affiliate Matches
+
+Tab 2: 🧵 Recent Threads
+
+List with:
+
+Title, Upvotes, Comments
+
+Intent type (colored tag)
+
+Matched Keywords (tooltip?)
+
+Tab 3: 📈 SERP Matches
+
+Reddit URLs that rank on Google
+
+Columns: Keyword, SERP Position, Thread Title
+
+Bottom Section – Actionable Panels
+
+Quick Actions (Sidebar or Cards):
+
+Run Crawler Now
+
+Refresh Opportunities
+
+Add Affiliate Program
+
+Connect Reddit Account
+
+Check Scheduler Status
+
+🌗 Theme & Aesthetic
+Dark mode first, toggle supported
+
+Rounded card UI
+
+Icons via Lucide or similar
+
+Use ShadCN UI or Tailwind components
+
+Responsive for mobile/tablet
+
+🔗 API Integration
+All components should connect to working backend routes:
+
+/api/opportunities
+
+/api/threads
+
+/api/affiliate-programs
+
+/api/crawl-history
+
+/api/serp-results
+
+/api/scheduler/status
+
+✅ Technical Notes
+Stack: Next.js (App Router) + React + TypeScript
+
+Use react-query or equivalent for API calls
+
+Pages live in app/ directory under dashboard/
+
+Add loading states & error boundaries
+
+Use utility hooks where needed (e.g., useOpportunities())
+
+🧪 Bonus (If Time Allows)
+Add small trend graph (line) showing Opportunity Score over time
+
+Add sorting/filtering on tables
+
+Animate cards/tabs using Framer Motion
+
+🎯 Task for Replit Agent:
+Please refactor the current dashboard based on the above layout and features. Keep functionality modular and scalable as this dashboard will be the central control panel for all Reddit affiliate automation workflows.
+
+Once complete, provide a summary of what changed and verify all API calls still connect correctly to the backend.
