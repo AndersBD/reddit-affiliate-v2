@@ -1,4 +1,34 @@
-// Types for Reddit Threads
+// Type definitions for the application
+
+// Thread filter options
+export interface ThreadFilterOptions {
+  subreddit?: string;
+  intentType?: string;
+  serpRank?: string;
+  affiliateProgram?: string;
+  search?: string;
+  limit?: number;
+  offset?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
+// Opportunity filter options
+export interface OpportunityFilterOptions {
+  threadId?: number;
+  intent?: string;
+  score?: number;
+  scoreMin?: number;
+  scoreMax?: number;
+  serpMatch?: boolean;
+  action?: string;
+  limit?: number;
+  offset?: number;
+  sortBy?: string;
+  sortDirection?: 'asc' | 'desc';
+}
+
+// Reddit Thread
 export interface RedditThread {
   id: number;
   title: string;
@@ -19,7 +49,7 @@ export interface RedditThread {
   affiliateMatch: number;
 }
 
-// Types for Affiliate Programs
+// Affiliate Program
 export interface AffiliateProgram {
   id: number;
   name: string;
@@ -31,84 +61,65 @@ export interface AffiliateProgram {
   active: boolean;
 }
 
-// Types for Comment Templates
+// Comment Template
 export interface CommentTemplate {
   id: number;
   name: string;
   template: string;
   type: string;
-  affiliateProgramId: number | null;
+  affiliateProgramId?: number;
 }
 
-// Types for Crawl History
+// Crawl History
 export interface CrawlHistory {
   id: number;
   startedAt: string;
-  completedAt: string | null;
+  completedAt?: string;
   threadCount: number;
   subreddits: string[];
-  status: 'running' | 'completed' | 'failed';
+  status: string;
   error?: string;
 }
 
-// Types for Thread Filtering
-export interface ThreadFilterOptions {
-  subreddit?: string;
-  intentType?: string;
-  serpRank?: string;
-  affiliateProgram?: string;
-  search?: string;
-  limit?: number;
-  offset?: number;
-  sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
-}
-
-// Types for Opportunities
+// Opportunity
 export interface Opportunity {
   id: number;
   threadId: number;
   score: number;
-  intent: string | null;
+  intent?: string;
   matchedProgramIds: number[];
   serpMatch: boolean;
-  action: string;
+  action?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-// Types for Opportunity Filtering
-export interface OpportunityFilterOptions {
-  threadId?: number;
-  intent?: string;
-  score?: number;
-  scoreMin?: number;
-  scoreMax?: number;
-  serpMatch?: boolean;
-  action?: string;
-  limit?: number;
-  offset?: number;
-  sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
-}
-
-// Types for SERP Results
+// SERP Result
 export interface SerpResult {
   id: number;
   threadId: number;
   query: string;
-  position: number;
-  isRanked: boolean;
+  position?: number;
   checkedAt: string;
+  isRanked: boolean;
 }
 
-// Types for Comment Generation
-export interface GenerateCommentRequest {
+// Stats Summary
+export interface StatsSummary {
+  totalOpportunities: number;
+  highIntentCount: number;
+  serpRankedCount: number;
+  opportunitiesBySubreddit: Record<string, number>;
+  opportunitiesByIntent: Record<string, number>;
+  opportunitiesByAffiliateProgram: Record<string, number>;
+}
+
+// Generated Comment
+export interface GeneratedComment {
+  id?: number; 
   threadId: number;
   affiliateProgramId: number;
   templateId: number;
-}
-
-export interface GenerateCommentResponse {
   comment: string;
+  createdAt?: string;
 }

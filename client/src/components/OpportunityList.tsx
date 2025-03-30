@@ -1,229 +1,261 @@
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import { Skeleton } from "@/components/ui/skeleton";
-import OpportunityCard from "./OpportunityCard";
+import React from "react";
 import { RedditThread } from "@/lib/types";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  MessageSquare,
+  ArrowUpFromLine,
+  Tag,
+  Calendar,
+  TrendingUp,
+  BarChart3,
+  Users
+} from "lucide-react";
 
 interface OpportunityListProps {
   isLoading: boolean;
-  error: Error | null;
-  data: any;
+  error: Error | null | unknown;
+  data: { threads: RedditThread[]; total: number } | undefined;
   onThreadClick: (thread: RedditThread) => void;
   onPageChange: (page: number) => void;
   currentOffset: number;
   pageSize: number;
 }
 
-export default function OpportunityList({ 
-  isLoading, 
-  error, 
-  data, 
+export default function OpportunityList({
+  isLoading,
+  error,
+  data,
   onThreadClick,
   onPageChange,
   currentOffset,
-  pageSize
+  pageSize,
 }: OpportunityListProps) {
+  // Error state
   if (error) {
     return (
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="text-center">
-          <h3 className="text-lg font-medium text-red-600">Error loading opportunities</h3>
-          <p className="mt-1 text-sm text-neutral-500">{error.message}</p>
-        </div>
+      <Card className="border-destructive">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-destructive flex items-center text-lg">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            Error Loading Opportunities
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            There was an error loading the opportunities. Please try again later or contact support.
+          </p>
+          <p className="text-xs mt-2 font-mono text-muted-foreground">
+            {error instanceof Error ? error.message : "Unknown error occurred"}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <Card key={i} className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-4 w-1/4 mt-2" />
+            </CardHeader>
+            <CardContent className="pb-2">
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-2/3" />
+            </CardContent>
+            <CardFooter className="flex justify-between pt-2">
+              <div className="flex gap-2">
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-9 w-24" />
+            </CardFooter>
+          </Card>
+        ))}
       </div>
     );
   }
 
-  const currentPage = Math.floor(currentOffset / pageSize) + 1;
-  const totalPages = data?.total ? Math.ceil(data.total / pageSize) : 0;
-  
-  // Generate pagination items
-  const generatePaginationItems = () => {
-    const items = [];
-    const maxVisiblePages = 5; // Maximum number of page links to show
-    
-    // Always show first page
-    items.push(
-      <PaginationItem key="page-1">
-        <PaginationLink 
-          onClick={() => onPageChange(1)}
-          isActive={currentPage === 1}
-        >
-          1
-        </PaginationLink>
-      </PaginationItem>
+  // Empty state
+  if (!data || !data.threads || data.threads.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg">No Opportunities Found</CardTitle>
+          <CardDescription>Try adjusting your filters or check back later</CardDescription>
+        </CardHeader>
+        <CardContent className="text-center py-8">
+          <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            We couldn't find any Reddit threads matching your criteria. Try broadening your search 
+            or check back after the next crawler run.
+          </p>
+        </CardContent>
+      </Card>
     );
-    
-    // Show ellipsis if needed
-    if (currentPage > 3) {
-      items.push(
-        <PaginationItem key="ellipsis-1">
-          <PaginationEllipsis />
-        </PaginationItem>
-      );
+  }
+
+  const { threads, total } = data;
+  const currentPage = Math.floor(currentOffset / pageSize) + 1;
+  const totalPages = Math.ceil(total / pageSize);
+
+  // Function to format date
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    }).format(date);
+  };
+
+  // Function to format link
+  const formatPermalink = (permalink: string) => {
+    return `https://reddit.com${permalink}`;
+  };
+
+  // Function to generate intent badge variant
+  const getIntentVariant = (intentType: string | undefined) => {
+    switch (intentType) {
+      case "QUESTION": return "default";
+      case "COMPARISON": return "secondary";
+      case "REVIEW": return "outline";
+      case "RECOMMENDATION": return "destructive";
+      case "DISCOVERY": return "default";
+      default: return "secondary";
     }
-    
-    // Show pages around current page
-    const startPage = Math.max(2, currentPage - 1);
-    const endPage = Math.min(totalPages - 1, currentPage + 1);
-    
-    for (let i = startPage; i <= endPage; i++) {
-      if (i > 1 && i < totalPages) {
-        items.push(
-          <PaginationItem key={`page-${i}`}>
-            <PaginationLink 
-              onClick={() => onPageChange(i)}
-              isActive={currentPage === i}
-            >
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-    }
-    
-    // Show ellipsis if needed
-    if (currentPage < totalPages - 2) {
-      items.push(
-        <PaginationItem key="ellipsis-2">
-          <PaginationEllipsis />
-        </PaginationItem>
-      );
-    }
-    
-    // Always show last page if there is more than one page
-    if (totalPages > 1) {
-      items.push(
-        <PaginationItem key={`page-${totalPages}`}>
-          <PaginationLink 
-            onClick={() => onPageChange(totalPages)}
-            isActive={currentPage === totalPages}
-          >
-            {totalPages}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-    
-    return items;
+  };
+
+  // Function to truncate text
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.slice(0, maxLength) + "...";
   };
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      <div className="border-b border-neutral-200 px-4 py-5 sm:px-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg leading-6 font-medium text-neutral-900">Latest Opportunities</h3>
-          {!isLoading && data && (
-            <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-green-100 text-green-800">
-              {data.total} found
-            </span>
-          )}
-        </div>
-        <p className="mt-1 text-sm text-neutral-500">Threads discovered from your target subreddits.</p>
+    <div className="space-y-4">
+      <div className="text-sm text-muted-foreground mb-2">
+        Showing {currentOffset + 1} - {Math.min(currentOffset + threads.length, total)} of {total} opportunities
       </div>
       
-      {isLoading ? (
-        <div className="divide-y divide-neutral-200">
-          {[...Array(3)].map((_, index) => (
-            <div key={index} className="px-4 py-4 sm:px-6">
-              <div className="flex items-center">
-                <Skeleton className="h-10 w-10 rounded-full" />
-                <div className="ml-4 flex-1">
-                  <Skeleton className="h-4 w-3/4 mb-2" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-                <Skeleton className="h-8 w-28" />
-              </div>
-              <Skeleton className="h-10 w-full mt-2" />
-            </div>
-          ))}
-        </div>
-      ) : (
-        <>
-          <ul className="divide-y divide-neutral-200">
-            {data?.threads?.length > 0 ? (
-              data.threads.map((thread: RedditThread) => (
-                <OpportunityCard 
-                  key={thread.id} 
-                  thread={thread} 
-                  onClick={() => onThreadClick(thread)}
-                />
-              ))
-            ) : (
-              <li className="px-4 py-8 text-center">
-                <p className="text-neutral-500">No opportunities found matching your criteria.</p>
-              </li>
-            )}
-          </ul>
+      {threads.map((thread) => (
+        <Card key={thread.id} className="overflow-hidden hover:border-primary/50 transition-colors">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg font-medium leading-tight">
+              {truncateText(thread.title, 100)}
+            </CardTitle>
+            <CardDescription className="flex items-center gap-2 text-xs">
+              <Users className="h-3 w-3" />
+              <span>r/{thread.subreddit}</span>
+              <span>•</span>
+              <span>{thread.author}</span>
+              <span>•</span>
+              <Calendar className="h-3 w-3" />
+              <span>{formatDate(thread.createdAt)}</span>
+            </CardDescription>
+          </CardHeader>
           
-          {data?.threads?.length > 0 && (
-            <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-neutral-200 sm:px-6">
-              <div className="flex-1 flex justify-between sm:hidden">
-                <Button
-                  onClick={() => onPageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  variant="outline"
-                  size="sm"
-                >
-                  Previous
-                </Button>
-                <Button
-                  onClick={() => onPageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  variant="outline"
-                  size="sm"
-                  className="ml-3"
-                >
-                  Next
-                </Button>
-              </div>
-              <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm text-neutral-700">
-                    Showing{" "}
-                    <span className="font-medium">{Math.min(currentOffset + 1, data.total)}</span>{" "}
-                    to{" "}
-                    <span className="font-medium">
-                      {Math.min(currentOffset + pageSize, data.total)}
-                    </span>{" "}
-                    of <span className="font-medium">{data.total}</span> results
-                  </p>
-                </div>
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious 
-                        onClick={() => onPageChange(currentPage - 1)}
-                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                      />
-                    </PaginationItem>
-                    
-                    {generatePaginationItems()}
-                    
-                    <PaginationItem>
-                      <PaginationNext 
-                        onClick={() => onPageChange(currentPage + 1)}
-                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
+          <CardContent className="pb-2">
+            <p className="text-sm text-muted-foreground">
+              {truncateText(thread.body, 200)}
+            </p>
+          </CardContent>
+          
+          <CardFooter className="pt-2 flex justify-between flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              {thread.intentType && (
+                <Badge variant={getIntentVariant(thread.intentType)}>
+                  {thread.intentType}
+                </Badge>
+              )}
+              
+              <Badge variant="outline" className="flex items-center gap-1">
+                <BarChart3 className="h-3 w-3" />
+                Score: {thread.score}
+              </Badge>
+              
+              {thread.hasSerp && thread.serpRank && (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" />
+                  SERP: #{thread.serpRank}
+                </Badge>
+              )}
+              
+              <Badge variant="outline" className="flex items-center gap-1">
+                <MessageSquare className="h-3 w-3" />
+                {thread.commentCount}
+              </Badge>
+              
+              <Badge variant="outline" className="flex items-center gap-1">
+                <ArrowUpFromLine className="h-3 w-3" />
+                {thread.upvotes}
+              </Badge>
+              
+              {thread.matchedKeywords && thread.matchedKeywords.length > 0 && (
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Tag className="h-3 w-3" />
+                  {thread.matchedKeywords.length} keyword{thread.matchedKeywords.length !== 1 ? "s" : ""}
+                </Badge>
+              )}
             </div>
-          )}
-        </>
+            
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={() => onThreadClick(thread)}
+            >
+              View Thread
+            </Button>
+          </CardFooter>
+        </Card>
+      ))}
+      
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-between items-center mt-6">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          
+          <div className="text-sm">
+            Page {currentPage} of {totalPages}
+          </div>
+          
+          <Button
+            variant="outline" 
+            size="sm"
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
       )}
     </div>
-  );
-}
-
-// Helper button component for mobile pagination
-function Button({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string, size?: string }) {
-  return (
-    <button
-      className={`relative inline-flex items-center px-4 py-2 border border-neutral-300 text-sm font-medium rounded-md text-neutral-700 bg-white hover:bg-neutral-50 ${props.disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-      {...props}
-    >
-      {children}
-    </button>
   );
 }
