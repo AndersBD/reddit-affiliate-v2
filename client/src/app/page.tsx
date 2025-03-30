@@ -1,278 +1,177 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { useToast } from "@/hooks/use-toast";
-import { RedditThread, ThreadFilterOptions } from "@/lib/types";
 import {
-  ArrowUpDown,
-  BarChart,
-  List,
-  RefreshCw,
-  Search,
-  Settings,
-  Star
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  GiftIcon,
+  BarChart3Icon,
+  SearchIcon,
+  MessageSquarePlusIcon,
+  GlobeIcon,
 } from "lucide-react";
-import FilterPanel from "@/components/FilterPanel";
-import OpportunityList from "@/components/OpportunityList";
-import ThreadPreviewModal from "@/components/ThreadPreviewModal";
 
 export default function HomePage() {
-  const { toast } = useToast();
-  const [selectedThread, setSelectedThread] = useState<RedditThread | null>(null);
-  const [filters, setFilters] = useState<ThreadFilterOptions>({
-    limit: 10,
-    offset: 0,
-  });
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Build query string from filters
-  const buildQueryString = () => {
-    const params = new URLSearchParams();
+  const router = useRouter();
+  
+  // Auto-redirect to dashboard page (this is just a landing page)
+  useEffect(() => {
+    // Using a small timeout allows the page to render briefly before redirecting
+    const timer = setTimeout(() => {
+      router.push("/niches-setup");
+    }, 500);
     
-    if (filters.subreddit) params.append("subreddit", filters.subreddit);
-    if (filters.intentType) params.append("intentType", filters.intentType);
-    if (filters.serpRank) params.append("serpRank", filters.serpRank);
-    if (filters.affiliateProgram) params.append("affiliateProgram", filters.affiliateProgram);
-    if (filters.search) params.append("search", filters.search);
-    if (filters.limit) params.append("limit", filters.limit.toString());
-    if (filters.offset) params.append("offset", filters.offset.toString());
-    if (filters.sortBy) params.append("sortBy", filters.sortBy);
-    if (filters.sortDirection) params.append("sortDirection", filters.sortDirection);
-    
-    return params.toString();
-  };
-
-  // Fetch threads
-  const { data, isLoading, error, refetch } = useQuery({
-    queryKey: [`/api/threads?${buildQueryString()}`],
-  });
-
-  // Stats query
-  const { data: statsData, isLoading: isLoadingStats } = useQuery({
-    queryKey: ['/api/stats'],
-  });
-
-  // Handle refreshing opportunities
-  const handleRefreshOpportunities = async () => {
-    try {
-      setIsRefreshing(true);
-      
-      const response = await apiRequest('POST', '/api/refresh-opportunities', {});
-      const result = await response.json();
-      
-      toast({
-        title: "Opportunities Refreshed",
-        description: `Successfully processed ${result.count} thread(s).`,
-      });
-      
-      refetch();
-    } catch (error) {
-      console.error("Error refreshing opportunities:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Failed to refresh opportunities. Please try again.",
-      });
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  // Handle opening the thread preview modal
-  const handleThreadClick = (thread: RedditThread) => {
-    setSelectedThread(thread);
-    setIsModalOpen(true);
-  };
-
-  // Handle closing the thread preview modal
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
-
-  // Handle filter changes
-  const handleFilterChange = (newFilters: Partial<ThreadFilterOptions>) => {
-    setFilters({
-      ...filters,
-      ...newFilters,
-      // Reset pagination when filters change
-      offset: 0
-    });
-  };
-
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    const newOffset = (newPage - 1) * (filters.limit || 10);
-    setFilters({
-      ...filters,
-      offset: newOffset
-    });
-  };
+    return () => clearTimeout(timer);
+  }, [router]);
 
   return (
-    <main className="container mx-auto p-4 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Reddit Affiliate Opportunities</h1>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline"
-            size="sm"
-            onClick={() => handleRefreshOpportunities()}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh Opportunities
-          </Button>
-          <Button variant="outline" size="sm">
-            <Settings className="h-4 w-4 mr-2" />
-            Settings
-          </Button>
+    <div className="container mx-auto py-10 px-4">
+      <div className="flex flex-col items-center text-center mb-10">
+        <div className="flex items-center mb-4">
+          <GiftIcon className="h-10 w-10 text-primary mr-2" />
+          <h1 className="text-4xl font-bold">Reddit Affiliate Engine</h1>
         </div>
+        <p className="text-xl text-muted-foreground max-w-2xl">
+          Discover high-potential Reddit threads for affiliate marketing opportunities
+        </p>
       </div>
       
-      <Separator />
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Opportunities</CardTitle>
-            <CardDescription>Opportunities ready for action</CardDescription>
+          <CardHeader>
+            <SearchIcon className="h-6 w-6 text-primary mb-2" />
+            <CardTitle>Intelligent Thread Discovery</CardTitle>
+            <CardDescription>
+              Automatically crawl subreddits to find threads with high engagement and affiliate potential
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingStats ? "..." : statsData?.totalOpportunities || 0}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">High Intent Threads</CardTitle>
-            <CardDescription>Threads with purchase intent</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingStats ? "..." : statsData?.highIntentCount || 0}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Google Ranked</CardTitle>
-            <CardDescription>Threads in Google top 10</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {isLoadingStats ? "..." : statsData?.serpRankedCount || 0}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-      
-      <Tabs defaultValue="all">
-        <div className="flex justify-between items-center">
-          <TabsList>
-            <TabsTrigger value="all">
-              <List className="h-4 w-4 mr-2" />
-              All Threads
-            </TabsTrigger>
-            <TabsTrigger value="top-scoring">
-              <Star className="h-4 w-4 mr-2" />
-              Top Scoring
-            </TabsTrigger>
-            <TabsTrigger value="google-ranked">
-              <Search className="h-4 w-4 mr-2" />
-              Google Ranked
-            </TabsTrigger>
-            <TabsTrigger value="analytics">
-              <BarChart className="h-4 w-4 mr-2" />
-              Analytics
-            </TabsTrigger>
-          </TabsList>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handleFilterChange({ sortBy: undefined })}
-          >
-            <ArrowUpDown className="h-4 w-4 mr-2" />
-            Clear Sorting
-          </Button>
-        </div>
-        
-        <TabsContent value="all" className="mt-4">
-          <FilterPanel 
-            filters={filters}
-            onFilterChange={handleFilterChange}
-          />
-          
-          <OpportunityList 
-            isLoading={isLoading}
-            error={error}
-            data={data}
-            onThreadClick={handleThreadClick}
-            onPageChange={handlePageChange}
-            currentOffset={filters.offset || 0}
-            pageSize={filters.limit || 10}
-          />
-        </TabsContent>
-        
-        <TabsContent value="top-scoring" className="mt-4">
-          <FilterPanel 
-            filters={{...filters, sortBy: "score", sortDirection: "desc"}}
-            onFilterChange={handleFilterChange}
-          />
-          
-          <OpportunityList 
-            isLoading={isLoading}
-            error={error}
-            data={data}
-            onThreadClick={handleThreadClick}
-            onPageChange={handlePageChange}
-            currentOffset={filters.offset || 0}
-            pageSize={filters.limit || 10}
-          />
-        </TabsContent>
-        
-        <TabsContent value="google-ranked" className="mt-4">
-          <FilterPanel 
-            filters={{...filters, serpRank: "Top 10"}}
-            onFilterChange={handleFilterChange}
-          />
-          
-          <OpportunityList 
-            isLoading={isLoading}
-            error={error}
-            data={data}
-            onThreadClick={handleThreadClick}
-            onPageChange={handlePageChange}
-            currentOffset={filters.offset || 0}
-            pageSize={filters.limit || 10}
-          />
-        </TabsContent>
-        
-        <TabsContent value="analytics" className="mt-4">
-          <div className="rounded-lg border p-8 text-center">
-            <h3 className="text-lg font-medium">Analytics Dashboard</h3>
-            <p className="text-sm text-muted-foreground mt-2">
-              Analytics features coming soon
+            <p className="text-sm text-muted-foreground">
+              Our advanced crawler finds threads across your selected subreddits and analyzes them for buying intent 
+              and keyword relevance to identify prime affiliate marketing opportunities.
             </p>
-          </div>
-        </TabsContent>
-      </Tabs>
+          </CardContent>
+          <CardFooter>
+            <Button variant="link" onClick={() => router.push("/discovery")}>
+              Discover Threads →
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <BarChart3Icon className="h-6 w-6 text-primary mb-2" />
+            <CardTitle>Opportunity Scoring</CardTitle>
+            <CardDescription>
+              Automatically analyze and score threads based on buying intent and keyword relevance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Our scoring algorithm evaluates threads for purchase intent, relevance to your affiliate programs, 
+              engagement metrics, and SERP visibility to ensure you focus on the highest-potential opportunities.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button variant="link" onClick={() => router.push("/discovery")}>
+              View Opportunities →
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <MessageSquarePlusIcon className="h-6 w-6 text-primary mb-2" />
+            <CardTitle>AI Comment Generator</CardTitle>
+            <CardDescription>
+              Generate personalized, high-converting affiliate comments with our AI assistant
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Create natural, helpful responses that seamlessly incorporate your affiliate links. Our AI ensures 
+              comments are valuable to users while optimizing for conversions and Reddit guidelines compliance.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button variant="link" onClick={() => router.push("/content-generator")}>
+              Generate Content →
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
       
-      {selectedThread && (
-        <ThreadPreviewModal
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          thread={selectedThread}
-        />
-      )}
-    </main>
+      <div className="flex flex-col items-center text-center">
+        <h2 className="text-2xl font-bold mb-4">Getting Started</h2>
+        <div className="flex flex-col md:flex-row gap-6 max-w-4xl">
+          <div className="flex-1 flex flex-col items-center p-4 rounded-lg border bg-card text-card-foreground">
+            <div className="bg-primary/10 rounded-full w-10 h-10 flex items-center justify-center mb-2">
+              <span className="text-primary font-bold">1</span>
+            </div>
+            <h3 className="text-lg font-medium mb-2">Set Up Your Niches</h3>
+            <p className="text-sm text-muted-foreground">
+              Configure your target niches and add affiliate programs you want to promote
+            </p>
+            <Button 
+              variant="link" 
+              className="mt-4"
+              onClick={() => router.push("/niches-setup")}
+            >
+              Configure Niches →
+            </Button>
+          </div>
+          
+          <div className="flex-1 flex flex-col items-center p-4 rounded-lg border bg-card text-card-foreground">
+            <div className="bg-primary/10 rounded-full w-10 h-10 flex items-center justify-center mb-2">
+              <span className="text-primary font-bold">2</span>
+            </div>
+            <h3 className="text-lg font-medium mb-2">Discover Opportunities</h3>
+            <p className="text-sm text-muted-foreground">
+              Run the crawler to find and analyze Reddit threads for affiliate opportunities
+            </p>
+            <Button 
+              variant="link" 
+              className="mt-4"
+              onClick={() => router.push("/discovery")}
+            >
+              Start Discovery →
+            </Button>
+          </div>
+          
+          <div className="flex-1 flex flex-col items-center p-4 rounded-lg border bg-card text-card-foreground">
+            <div className="bg-primary/10 rounded-full w-10 h-10 flex items-center justify-center mb-2">
+              <span className="text-primary font-bold">3</span>
+            </div>
+            <h3 className="text-lg font-medium mb-2">Create Affiliate Content</h3>
+            <p className="text-sm text-muted-foreground">
+              Generate effective, natural-sounding affiliate comments to post on Reddit
+            </p>
+            <Button 
+              variant="link" 
+              className="mt-4"
+              onClick={() => router.push("/content-generator")}
+            >
+              Create Content →
+            </Button>
+          </div>
+        </div>
+      </div>
+      
+      <footer className="mt-20 text-center text-sm text-muted-foreground">
+        <div className="flex items-center justify-center gap-1 mb-2">
+          <GlobeIcon className="h-4 w-4" />
+          <span>Reddit Affiliate Opportunity Engine</span>
+        </div>
+        <p>© 2025 All Rights Reserved</p>
+      </footer>
+    </div>
   );
 }

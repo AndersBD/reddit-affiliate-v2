@@ -1,11 +1,8 @@
-import "../index.css";
+import { Inter } from "next/font/google";
+import "./globals.css";
 import { Providers } from "./providers";
-import { Toaster } from "@/components/ui/toaster";
 
-export const metadata = {
-  title: "Reddit Affiliate Opportunity Engine",
-  description: "Discover high-potential affiliate marketing opportunities on Reddit",
-};
+const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({
   children,
@@ -14,11 +11,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-background antialiased">
-        <Providers>
-          {children}
-          <Toaster />
-        </Providers>
+      <head>
+        <title>Reddit Affiliate Opportunity Engine</title>
+        <meta name="description" content="Discover high-potential Reddit threads for affiliate marketing opportunities" />
+        <link rel="icon" href="/favicon.ico" />
+      </head>
+      <body className={inter.className}>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

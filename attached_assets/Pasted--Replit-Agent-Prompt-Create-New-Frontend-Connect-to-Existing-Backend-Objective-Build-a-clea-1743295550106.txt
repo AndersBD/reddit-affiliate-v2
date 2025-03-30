@@ -1,0 +1,141 @@
+✅ Replit Agent Prompt — Create New Frontend & Connect to Existing Backend
+🎯 Objective: Build a clean, modular frontend for the Reddit Affiliate Automation platform and connect it to the existing backend APIs in the reddit-affiliate-v2 project.
+
+🧱 Stack & Design System
+Use the following stack:
+
+React 18+ with Next.js App Router
+
+TypeScript
+
+TailwindCSS + shadcn/ui for UI components
+
+React Query for API state management
+
+Zod for client-side schema validation
+
+Radix UI for primitives (where needed)
+
+🖥️ Pages / Views to Implement
+Build the frontend as a modular dashboard with the following key views:
+
+1. Niche & Subreddit Setup
+Allow users to:
+
+Select one or more niches
+
+Add affiliate programs (name, affiliate link, promo code)
+
+Choose subreddits (from predefined categories via /api/subreddit-categories)
+
+Components:
+
+NicheSelector.tsx
+
+AffiliateProgramForm.tsx
+
+SubredditPicker.tsx
+
+2. Keyword & Thread Discovery
+Display:
+
+Trending keywords (fetched from Google SERP + Keyworddit)
+
+Recently crawled Reddit threads (from /api/threads)
+
+SERP-ranked Reddit links (from /api/serp-results)
+
+Components:
+
+KeywordTrendPanel.tsx
+
+ThreadList.tsx
+
+ThreadCard.tsx (includes matched keywords, affiliate match, intent)
+
+3. AI Content Generator
+UI to generate:
+
+Reddit-style posts or comments
+
+Based on selected thread + keyword + affiliate
+
+Integrate with backend prompt builder (if available) or placeholder for now.
+
+Components:
+
+ContentGenerator.tsx
+
+PromptEditor.tsx
+
+PostPreview.tsx
+
+4. Scheduling Queue
+Show:
+
+Queued posts/comments (GET /api/queue)
+
+Controls to:
+
+Set time
+
+Assign Reddit account (optional)
+
+Enable natural delays / anti-spam toggles
+
+Components:
+
+ScheduleTable.tsx
+
+PostSchedulerForm.tsx
+
+5. Analytics Dashboard
+Visualize:
+
+CTR, Conversions, Upvotes per post
+
+Affiliate performance by program or subreddit
+
+Include recommendation engine placeholder
+
+Components:
+
+ConversionChart.tsx
+
+OpportunityPerformanceTable.tsx
+
+Leaderboard.tsx
+
+🔌 Backend Integration (Required)
+All components must fetch real data via existing backend endpoints. Connect to:
+
+Data Type	Endpoint
+Subreddits	GET /api/subreddits
+Threads	GET /api/threads
+Opportunities	GET /api/opportunities
+Affiliate Programs	GET /api/affiliate-programs
+Run Crawler	POST /api/run-crawler
+SERP Results	GET /api/serp-results
+Schedule Queue	GET /api/queue
+Content Templates	GET /api/templates (if exists)
+Use React Query hooks to fetch and mutate this data with appropriate loading/error states.
+
+💅 UI Style
+Design should resemble modern SaaS dashboards (like Notion, Airtable, or ConvertKit).
+
+Mobile responsiveness is optional for MVP, but support 1280px+ layouts.
+
+Use tabbed interfaces, sidebars, and cards for clean data display.
+
+Prioritize Reddit-native formatting: markdown previews, upvote icons, flair chips.
+
+✅ Final Outcome
+A new frontend app inside client/ that:
+
+🧭 Allows users to move through the full flow from niche selection → opportunity analysis → post scheduling
+
+⚙️ Displays live backend data (threads, affiliate programs, SERP matches)
+
+🧠 Is structured cleanly with modular components for future Agent work
+
+🧪 Is ready for integration with testing or agent-based post generation
