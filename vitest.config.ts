@@ -1,26 +1,21 @@
-/// <reference types="vitest" />
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
   test: {
+    globals: true,
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
-    include: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
-    globals: true,
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html'],
-      exclude: ['node_modules/', 'vitest.setup.ts'],
-    },
-  },
-  resolve: {
+    include: ['**/*.test.{ts,tsx}'],
     alias: {
       '@': path.resolve(__dirname, './client/src'),
+      '@lib': path.resolve(__dirname, './client/src/lib'),
+      '@components': path.resolve(__dirname, './client/src/components'),
+      '@hooks': path.resolve(__dirname, './client/src/hooks'),
+      '@pages': path.resolve(__dirname, './client/src/pages'),
       '@shared': path.resolve(__dirname, './shared'),
-      '@assets': path.resolve(__dirname, './attached_assets'),
-    },
-  },
+      '@server': path.resolve(__dirname, './server'),
+      '@tests': path.resolve(__dirname, './tests')
+    }
+  }
 });

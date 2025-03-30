@@ -1,109 +1,66 @@
 import { http, HttpResponse } from 'msw';
-import type { 
-  RedditThread, 
-  AffiliateProgram, 
-  CommentTemplate, 
-  CrawlHistory,
-  Opportunity,
-  SerpResult
-} from '../../client/src/lib/types';
+
+// Define data types
+export interface Thread {
+  id: number;
+  title: string;
+  subreddit: string;
+  url: string;
+  upvotes: number;
+  commentCount: number;
+  crawledAt: string;
+}
+
+export interface Opportunity {
+  id: number;
+  threadId: number;
+  score: number;
+  intent: string | null;
+  matchedProgramIds: number[];
+  serpMatch: boolean;
+  action: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AffiliateProgram {
+  id: number;
+  name: string;
+  website: string;
+  commission: string;
+  category: string;
+  keywords: string[];
+  description: string;
+}
 
 // Sample data for tests
-export const sampleThreads: RedditThread[] = [
+export const sampleThreads: Thread[] = [
   {
     id: 1,
-    title: 'Best SEO tool for keyword research?',
-    body: 'I\'m looking for a good SEO tool that specializes in keyword research. Any recommendations?',
-    subreddit: 'SEO',
-    permalink: '/r/SEO/comments/abc123/best_seo_tool_for_keyword_research',
-    upvotes: 25,
-    commentCount: 12,
-    author: 'seoguru',
-    createdAt: '2023-05-15T10:15:00Z',
-    crawledAt: '2023-05-15T12:30:00Z',
-    score: 0.85,
-    intentType: 'recommendation',
-    serpRank: 3,
-    hasSerp: true,
-    matchedKeywords: ['seo', 'keyword research'],
-    affiliateMatch: 2
+    title: "What's the best way to monetize a blog in 2025?",
+    subreddit: "blogging",
+    url: "https://reddit.com/r/blogging/post1",
+    upvotes: 152,
+    commentCount: 47,
+    crawledAt: "2025-03-28T14:22:41Z"
   },
   {
     id: 2,
-    title: 'Jasper AI vs Copy.ai - which is better for blogging?',
-    body: 'I\'ve been using Copy.ai but wondering if Jasper is worth the switch for creating blog content.',
-    subreddit: 'blogging',
-    permalink: '/r/blogging/comments/def456/jasper_ai_vs_copyai_which_is_better_for_blogging',
-    upvotes: 42,
-    commentCount: 18,
-    author: 'contentcreator',
-    createdAt: '2023-05-16T14:20:00Z',
-    crawledAt: '2023-05-16T15:45:00Z',
-    score: 0.92,
-    intentType: 'comparison',
-    serpRank: 1,
-    hasSerp: true,
-    matchedKeywords: ['jasper ai', 'copy.ai', 'blogging'],
-    affiliateMatch: 1
-  }
-];
-
-export const sampleAffiliatePrograms: AffiliateProgram[] = [
-  {
-    id: 1,
-    name: 'Jasper AI',
-    description: 'AI writing assistant for content creators',
-    link: 'https://jasper.ai/refer/affiliate',
-    promoCode: 'REDDIT20',
-    keywords: ['jasper', 'jarvis ai', 'conversion ai', 'ai writing', 'content creation'],
-    commissionRate: '30% recurring',
-    active: true
+    title: "Comparing Affiliate Programs: Amazon vs Commission Junction",
+    subreddit: "SEO",
+    url: "https://reddit.com/r/SEO/post2",
+    upvotes: 89,
+    commentCount: 31,
+    crawledAt: "2025-03-28T09:15:32Z"
   },
   {
-    id: 2,
-    name: 'Semrush',
-    description: 'All-in-one SEO tool suite',
-    link: 'https://semrush.com/partner/affiliate',
-    promoCode: 'SEOFIRST',
-    keywords: ['seo', 'keyword research', 'competitor analysis', 'semrush'],
-    commissionRate: '40% first month',
-    active: true
-  }
-];
-
-export const sampleCommentTemplates: CommentTemplate[] = [
-  {
-    id: 1,
-    name: 'General Recommendation',
-    template: 'Have you tried {{program}}? {{benefit}}. You can check it out here: {{link}}',
-    type: 'recommendation',
-    affiliateProgramId: 1
-  },
-  {
-    id: 2,
-    name: 'Comparison Winner',
-    template: 'After testing both, I\'d recommend {{program}} because {{reason}}. {{feature}} is particularly good for {{use_case}}. Get started here: {{link}} (use promo code {{promo_code}} for {{discount}})',
-    type: 'comparison',
-    affiliateProgramId: 1
-  }
-];
-
-export const sampleCrawlHistory: CrawlHistory[] = [
-  {
-    id: 1,
-    startedAt: '2023-05-15T10:00:00Z',
-    completedAt: '2023-05-15T10:15:00Z',
-    threadCount: 120,
-    subreddits: ['SEO', 'marketing', 'contentcreators'],
-    status: 'completed'
-  },
-  {
-    id: 2,
-    startedAt: '2023-05-17T09:30:00Z',
-    completedAt: null,
-    threadCount: 0,
-    subreddits: ['blogging', 'Entrepreneur', 'startups'],
-    status: 'running'
+    id: 3,
+    title: "Looking for recommendations on best hosting for WordPress",
+    subreddit: "Wordpress",
+    url: "https://reddit.com/r/Wordpress/post3",
+    upvotes: 203,
+    commentCount: 78,
+    crawledAt: "2025-03-27T18:42:19Z"
   }
 ];
 
@@ -111,200 +68,103 @@ export const sampleOpportunities: Opportunity[] = [
   {
     id: 1,
     threadId: 1,
-    score: 85,
-    intent: 'recommendation',
-    matchedProgramIds: [2],
+    score: 87,
+    intent: "recommendation",
+    matchedProgramIds: [1, 3, 5],
     serpMatch: true,
-    action: 'pending',
-    createdAt: '2023-05-15T12:35:00Z',
-    updatedAt: '2023-05-15T12:35:00Z'
+    action: null,
+    createdAt: "2025-03-28T14:30:22Z",
+    updatedAt: "2025-03-28T14:30:22Z"
   },
   {
     id: 2,
     threadId: 2,
     score: 92,
-    intent: 'comparison',
-    matchedProgramIds: [1],
+    intent: "comparison",
+    matchedProgramIds: [1, 2],
     serpMatch: true,
-    action: 'pending',
-    createdAt: '2023-05-16T16:00:00Z',
-    updatedAt: '2023-05-16T16:00:00Z'
+    action: "followed_up",
+    createdAt: "2025-03-28T09:22:10Z",
+    updatedAt: "2025-03-28T15:45:18Z"
+  },
+  {
+    id: 3,
+    threadId: 3,
+    score: 95,
+    intent: "recommendation",
+    matchedProgramIds: [4, 6],
+    serpMatch: false,
+    action: "saved",
+    createdAt: "2025-03-27T19:01:45Z",
+    updatedAt: "2025-03-27T19:01:45Z"
   }
 ];
 
-export const sampleSerpResults: SerpResult[] = [
+export const sampleAffiliatePrograms: AffiliateProgram[] = [
   {
     id: 1,
-    threadId: 1,
-    query: 'best seo tool for keyword research',
-    position: 3,
-    isRanked: true,
-    checkedAt: '2023-05-15T12:32:00Z'
+    name: "Amazon Associates",
+    website: "https://affiliate-program.amazon.com/",
+    commission: "1-10%",
+    category: "General",
+    keywords: ["amazon", "product", "retail", "shop", "buy"],
+    description: "The most popular affiliate program covering millions of products."
   },
   {
     id: 2,
-    threadId: 2,
-    query: 'jasper ai vs copy.ai blogging',
-    position: 1,
-    isRanked: true,
-    checkedAt: '2023-05-16T15:50:00Z'
+    name: "Commission Junction",
+    website: "https://www.cj.com/",
+    commission: "5-15%",
+    category: "General",
+    keywords: ["cj", "commission junction", "retail", "shop"],
+    description: "Large affiliate network with many brands and retailers."
+  },
+  {
+    id: 3,
+    name: "Bluehost",
+    website: "https://www.bluehost.com/affiliates",
+    commission: "$65 per signup",
+    category: "Hosting",
+    keywords: ["hosting", "wordpress", "web hosting", "domain", "website"],
+    description: "Popular web hosting affiliate program with high commissions."
+  },
+  {
+    id: 4,
+    name: "SiteGround",
+    website: "https://www.siteground.com/affiliates",
+    commission: "$50-100 per signup",
+    category: "Hosting",
+    keywords: ["hosting", "wordpress", "web hosting", "website"],
+    description: "Web hosting affiliate program with tiered commissions."
   }
 ];
 
-// API handler definitions for MSW
+// Mock API handlers for testing
 export const handlers = [
-  // Threads endpoints
-  http.get('/api/threads', ({ request }) => {
-    // Support query parameters like in our API
-    const url = new URL(request.url);
-    const subreddit = url.searchParams.get('subreddit');
-    
-    let filteredThreads = [...sampleThreads];
-    if (subreddit) {
-      filteredThreads = filteredThreads.filter(thread => thread.subreddit === subreddit);
-    }
-    
-    return HttpResponse.json({
-      threads: filteredThreads,
-      total: filteredThreads.length,
-      limit: 10,
-      offset: 0
-    });
-  }),
-
-  http.get('/api/threads/:id', ({ params }) => {
-    const id = params.id;
-    const thread = sampleThreads.find(t => t.id === parseInt(id as string));
-    
-    if (!thread) {
-      return HttpResponse.json(
-        { message: 'Thread not found' },
-        { status: 404 }
-      );
-    }
-    
-    return HttpResponse.json(thread);
-  }),
-
-  // Affiliate Programs endpoints
-  http.get('/api/affiliate-programs', () => {
-    return HttpResponse.json(sampleAffiliatePrograms);
-  }),
-
-  // Comment Templates endpoints
-  http.get('/api/comment-templates', ({ request }) => {
-    const url = new URL(request.url);
-    const type = url.searchParams.get('type');
-    
-    let filteredTemplates = [...sampleCommentTemplates];
-    if (type) {
-      filteredTemplates = filteredTemplates.filter(template => template.type === type);
-    }
-    
-    return HttpResponse.json(filteredTemplates);
-  }),
-
-  // Crawl history endpoints
-  http.get('/api/crawl-history', () => {
-    return HttpResponse.json(sampleCrawlHistory);
-  }),
-
-  // Generate comment endpoint
-  http.post('/api/generate-comment', async ({ request }) => {
-    const { threadId, affiliateProgramId, templateId } = await request.json();
-    
-    // Get the relevant objects
-    const thread = sampleThreads.find(t => t.id === threadId);
-    const program = sampleAffiliatePrograms.find(p => p.id === affiliateProgramId);
-    const template = sampleCommentTemplates.find(t => t.id === templateId);
-    
-    if (!thread || !program || !template) {
-      return HttpResponse.json(
-        { message: `${!thread ? 'Thread' : !program ? 'Affiliate program' : 'Template'} not found` },
-        { status: 404 }
-      );
-    }
-
-    let comment = template.template;
-    comment = comment.replace(/\{\{program\}\}/g, program.name);
-    comment = comment.replace(/\{\{link\}\}/g, program.link);
-    comment = comment.replace(/\{\{promo_code\}\}/g, program.promoCode || '');
-    comment = comment.replace(/\{\{benefit\}\}/g, 'It has specialized templates for blog posts and articles');
-    
-    return HttpResponse.json({ comment });
-  }),
-
-  // Run crawler endpoint
-  http.post('/api/run-crawler', async ({ request }) => {
-    try {
-      const body = await request.json();
-      // Checking if body.subreddits exists
-      let subreddits = body?.subreddits;
-      
-      // If subreddits are not provided or empty, use default subreddits
-      if (!subreddits || !Array.isArray(subreddits) || subreddits.length === 0) {
-        // Mock default subreddits (a subset of the full list)
-        subreddits = [
-          "r/artificial", "r/MachineLearning", "r/ChatGPT",
-          "r/SaaS", "r/microsaas", "r/Startups",
-          "r/programming", "r/webdev", "r/coding"
-        ];
-      }
-      
-      const newCrawl: CrawlHistory = {
-        id: 3,
-        startedAt: new Date().toISOString(),
-        completedAt: null,
-        threadCount: 0,
-        subreddits,
-        status: 'running',
-        error: null
-      };
-      
-      return HttpResponse.json(newCrawl);
-    } catch (error) {
-      return HttpResponse.json(
-        { message: "Failed to parse request body" },
-        { status: 400 }
-      );
-    }
-  }),
-
-  // Opportunities endpoints
+  // GET /api/opportunities
   http.get('/api/opportunities', ({ request }) => {
     const url = new URL(request.url);
-    const threadId = url.searchParams.get('threadId');
     const intent = url.searchParams.get('intent');
-    const scoreMin = url.searchParams.get('scoreMin');
-    const scoreMax = url.searchParams.get('scoreMax');
-    const serpMatch = url.searchParams.get('serpMatch');
-    const action = url.searchParams.get('action');
+    const subreddit = url.searchParams.get('subreddit');
+    const minScore = url.searchParams.get('minScore');
     
     let filteredOpportunities = [...sampleOpportunities];
-    
-    if (threadId) {
-      filteredOpportunities = filteredOpportunities.filter(opp => opp.threadId === parseInt(threadId));
-    }
     
     if (intent) {
       filteredOpportunities = filteredOpportunities.filter(opp => opp.intent === intent);
     }
     
-    if (scoreMin) {
-      filteredOpportunities = filteredOpportunities.filter(opp => opp.score >= parseInt(scoreMin));
+    if (subreddit) {
+      // Filter by thread's subreddit
+      filteredOpportunities = filteredOpportunities.filter(opp => {
+        const thread = sampleThreads.find(t => t.id === opp.threadId);
+        return thread?.subreddit === subreddit;
+      });
     }
     
-    if (scoreMax) {
-      filteredOpportunities = filteredOpportunities.filter(opp => opp.score <= parseInt(scoreMax));
-    }
-    
-    if (serpMatch !== null) {
-      const serpMatchBool = serpMatch === 'true';
-      filteredOpportunities = filteredOpportunities.filter(opp => opp.serpMatch === serpMatchBool);
-    }
-    
-    if (action) {
-      filteredOpportunities = filteredOpportunities.filter(opp => opp.action === action);
+    if (minScore) {
+      const scoreThreshold = parseInt(minScore);
+      filteredOpportunities = filteredOpportunities.filter(opp => opp.score >= scoreThreshold);
     }
     
     return HttpResponse.json({
@@ -315,207 +175,104 @@ export const handlers = [
     });
   }),
   
+  // GET /api/opportunities/:id
   http.get('/api/opportunities/:id', ({ params }) => {
-    const id = params.id;
-    const opportunity = sampleOpportunities.find(o => o.id === parseInt(id as string));
+    const id = parseInt(params.id as string);
+    const opportunity = sampleOpportunities.find(o => o.id === id);
     
     if (!opportunity) {
-      return HttpResponse.json(
-        { message: 'Opportunity not found' },
-        { status: 404 }
-      );
+      return new HttpResponse(null, { status: 404 });
     }
     
-    return HttpResponse.json(opportunity);
+    return HttpResponse.json({ opportunity });
   }),
   
-  http.get('/api/threads/:threadId/opportunities', ({ params }) => {
-    const threadId = params.threadId;
-    const opportunities = sampleOpportunities.filter(o => o.threadId === parseInt(threadId as string));
-    
+  // GET /api/threads
+  http.get('/api/threads', () => {
     return HttpResponse.json({
-      opportunities,
-      total: opportunities.length,
+      threads: sampleThreads,
+      total: sampleThreads.length,
       limit: 10,
       offset: 0
     });
   }),
   
-  http.post('/api/opportunities', async ({ request }) => {
-    const body = await request.json();
+  // GET /api/threads/:id
+  http.get('/api/threads/:id', ({ params }) => {
+    const id = parseInt(params.id as string);
+    const thread = sampleThreads.find(t => t.id === id);
     
-    const newOpportunity: Opportunity = {
-      id: sampleOpportunities.length + 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      ...body
-    };
+    if (!thread) {
+      return new HttpResponse(null, { status: 404 });
+    }
     
-    return HttpResponse.json(newOpportunity);
+    return HttpResponse.json({ thread });
   }),
   
+  // GET /api/threads/:threadId/opportunities
+  http.get('/api/threads/:threadId/opportunities', ({ params }) => {
+    const threadId = parseInt(params.threadId as string);
+    const threadOpportunities = sampleOpportunities.filter(o => o.threadId === threadId);
+    
+    return HttpResponse.json({
+      opportunities: threadOpportunities,
+      total: threadOpportunities.length,
+      limit: 10,
+      offset: 0
+    });
+  }),
+  
+  // GET /api/affiliate-programs
+  http.get('/api/affiliate-programs', () => {
+    return HttpResponse.json({
+      programs: sampleAffiliatePrograms,
+      total: sampleAffiliatePrograms.length,
+      limit: 10,
+      offset: 0
+    });
+  }),
+  
+  // POST /api/refresh-opportunities
+  http.post('/api/refresh-opportunities', () => {
+    return HttpResponse.json({ count: 5, message: "Opportunities refreshed successfully" });
+  }),
+  
+  // POST /api/run-crawler
+  http.post('/api/run-crawler', () => {
+    return HttpResponse.json({
+      id: 3,
+      startedAt: new Date().toISOString(),
+      completedAt: null,
+      threadCount: 0,
+      subreddits: ['SEO', 'blogging', 'Wordpress'],
+      status: 'running'
+    });
+  }),
+  
+  // PATCH /api/opportunities/:id
   http.patch('/api/opportunities/:id', async ({ params, request }) => {
     const id = parseInt(params.id as string);
-    const body = await request.json();
-    
     const opportunity = sampleOpportunities.find(o => o.id === id);
     
     if (!opportunity) {
-      return HttpResponse.json(
-        { message: 'Opportunity not found' },
-        { status: 404 }
-      );
+      return new HttpResponse(null, { status: 404 });
     }
     
-    const updatedOpportunity: Opportunity = {
-      ...opportunity,
-      ...body,
+    const body = await request.json() as Record<string, unknown>;
+    
+    // Create updated opportunity with proper typing
+    const updatedOpportunity = {
+      id: opportunity.id,
+      threadId: opportunity.threadId,
+      score: body.score !== undefined ? Number(body.score) : opportunity.score,
+      intent: body.intent !== undefined ? String(body.intent) : opportunity.intent,
+      matchedProgramIds: opportunity.matchedProgramIds,
+      serpMatch: opportunity.serpMatch,
+      action: body.action !== undefined ? String(body.action) : opportunity.action,
+      createdAt: opportunity.createdAt,
       updatedAt: new Date().toISOString()
     };
     
     return HttpResponse.json(updatedOpportunity);
-  }),
-  
-  http.delete('/api/opportunities/:id', ({ params }) => {
-    const id = parseInt(params.id as string);
-    const opportunityExists = sampleOpportunities.some(o => o.id === id);
-    
-    if (!opportunityExists) {
-      return HttpResponse.json(
-        { message: 'Opportunity not found' },
-        { status: 404 }
-      );
-    }
-    
-    return HttpResponse.json({ success: true });
-  }),
-  
-  // SERP Results endpoints
-  http.get('/api/serp-results', () => {
-    return HttpResponse.json(sampleSerpResults);
-  }),
-  
-  http.get('/api/serp-results/:id', ({ params }) => {
-    const id = params.id;
-    const serpResult = sampleSerpResults.find(s => s.id === parseInt(id as string));
-    
-    if (!serpResult) {
-      return HttpResponse.json(
-        { message: 'SERP result not found' },
-        { status: 404 }
-      );
-    }
-    
-    return HttpResponse.json(serpResult);
-  }),
-  
-  http.get('/api/threads/:threadId/serp-results', ({ params }) => {
-    const threadId = params.threadId;
-    const serpResults = sampleSerpResults.filter(s => s.threadId === parseInt(threadId as string));
-    
-    return HttpResponse.json(serpResults);
-  }),
-  
-  http.post('/api/serp-results', async ({ request }) => {
-    const body = await request.json();
-    
-    const newSerpResult: SerpResult = {
-      id: sampleSerpResults.length + 1,
-      checkedAt: new Date().toISOString(),
-      ...body
-    };
-    
-    return HttpResponse.json(newSerpResult);
-  }),
-  
-  http.patch('/api/serp-results/:id', async ({ params, request }) => {
-    const id = parseInt(params.id as string);
-    const body = await request.json();
-    
-    const serpResult = sampleSerpResults.find(s => s.id === id);
-    
-    if (!serpResult) {
-      return HttpResponse.json(
-        { message: 'SERP result not found' },
-        { status: 404 }
-      );
-    }
-    
-    const updatedSerpResult: SerpResult = {
-      ...serpResult,
-      ...body
-    };
-    
-    return HttpResponse.json(updatedSerpResult);
-  }),
-  
-  http.delete('/api/serp-results/:id', ({ params }) => {
-    const id = parseInt(params.id as string);
-    const serpResultExists = sampleSerpResults.some(s => s.id === id);
-    
-    if (!serpResultExists) {
-      return HttpResponse.json(
-        { message: 'SERP result not found' },
-        { status: 404 }
-      );
-    }
-    
-    return HttpResponse.json({ success: true });
-  }),
-  
-  // Refresh opportunities endpoint
-  http.post('/api/refresh-opportunities', () => {
-    return HttpResponse.json({ count: 5 });
-  }),
-
-  // Subreddit categories endpoints
-  http.get('/api/subreddit-categories', () => {
-    const categories = [
-      "AI & Machine Learning",
-      "SaaS & Startup",
-      "Software Development & Engineering",
-      "No-Code / Automation",
-      "Marketing, SEO & Content Strategy",
-      "Productivity & Knowledge Tools"
-    ];
-    return HttpResponse.json(categories);
-  }),
-
-  http.get('/api/subreddit-categories/:category', ({ params }) => {
-    const category = params.category as string;
-    
-    // Define mock subreddits per category
-    const subredditMap: Record<string, string[]> = {
-      "AI & Machine Learning": ["r/artificial", "r/MachineLearning", "r/ChatGPT"],
-      "SaaS & Startup": ["r/SaaS", "r/microsaas", "r/Startups"],
-      "Software Development & Engineering": ["r/programming", "r/webdev", "r/coding"],
-      "No-Code / Automation": ["r/NoCode", "r/NoCodeDevelopment", "r/automation"],
-      "Marketing, SEO & Content Strategy": ["r/marketing", "r/SEO", "r/content_marketing"],
-      "Productivity & Knowledge Tools": ["r/productivity", "r/Notion", "r/ObsidianMD"]
-    };
-    
-    const subreddits = subredditMap[category];
-    
-    if (!subreddits) {
-      return HttpResponse.json(
-        { message: 'Category not found' },
-        { status: 404 }
-      );
-    }
-    
-    return HttpResponse.json(subreddits);
-  }),
-
-  http.get('/api/subreddits', () => {
-    // Return a flattened list of all subreddits from all categories
-    const allSubreddits = [
-      "r/artificial", "r/MachineLearning", "r/ChatGPT",
-      "r/SaaS", "r/microsaas", "r/Startups",
-      "r/programming", "r/webdev", "r/coding",
-      "r/NoCode", "r/NoCodeDevelopment", "r/automation",
-      "r/marketing", "r/SEO", "r/content_marketing",
-      "r/productivity", "r/Notion", "r/ObsidianMD"
-    ];
-    return HttpResponse.json(allSubreddits);
   })
 ];

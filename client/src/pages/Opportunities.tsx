@@ -157,11 +157,23 @@ function OpportunitiesPage() {
   // Run crawler function
   const runCrawler = async () => {
     try {
+      // Start crawler job
       setIsCrawlerRunning(true);
+      console.log("Running crawler...");
       await apiRequest("POST", "/api/run-crawler");
+      
+      // Refresh opportunities with the new data
+      console.log("Refreshing opportunities...");
+      await apiRequest("POST", "/api/refresh-opportunities");
+      
+      // Invalidate all related queries to fetch latest data
       queryClient.invalidateQueries({ queryKey: ["/api/threads"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/opportunities"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/serp-results"] });
+      
       setTimeout(() => {
         setIsCrawlerRunning(false);
+        console.log("Crawler and opportunity refresh completed");
       }, 2000);
     } catch (error) {
       console.error("Failed to run crawler:", error);
@@ -695,6 +707,7 @@ function OpportunitiesPage() {
                                     size="sm"
                                     variant="outline"
                                     className="h-8 w-8 p-0"
+                                    aria-label="View details"
                                     onClick={() => setSelectedOpportunity(opportunity.id)}
                                   >
                                     <Eye className="h-4 w-4" />
