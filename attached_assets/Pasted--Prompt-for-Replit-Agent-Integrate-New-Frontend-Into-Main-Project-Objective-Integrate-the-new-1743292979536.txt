@@ -1,0 +1,101 @@
+✅ Prompt for Replit Agent: Integrate New Frontend Into Main Project
+🛠️ Objective: Integrate the new frontend from reddit-revenue-hub into the main project reddit-affiliate-v2, replacing or merging with the current UI. Ensure it displays actual data from the backend, including real-time Reddit threads, affiliate programs, and opportunity scores.
+
+🧱 Stack Consistency
+Ensure the frontend follows this tech stack:
+
+Next.js (App Router, latest version)
+
+React 18+
+
+TailwindCSS (with shadcn/ui preferred for components)
+
+TypeScript
+
+React Query (for API calls)
+
+Drizzle ORM or Supabase client (via backend APIs)
+
+Vitest + Playwright (testing if applicable)
+
+🔗 Backend Connection Goals
+Connect frontend to API layer in reddit-affiliate-v2 using the existing client/src/lib/api.ts functions or rewire to new structure if needed.
+
+Ensure the frontend fetches and displays:
+
+✅ Crawled Reddit Threads
+
+✅ Opportunities with scores, matched affiliate programs, intent
+
+✅ Affiliate Programs list with promo codes & links
+
+✅ Crawler status, history, and trigger
+
+Preserve working backend endpoints already in place (e.g., /api/threads, /api/opportunities, /api/run-crawler).
+
+🔄 Migration Tasks
+📁 Move/replace frontend:
+
+Copy relevant files from reddit-revenue-hub into reddit-affiliate-v2/client/
+
+Clean up any outdated files if needed (client/pages/, client/components/, etc.)
+
+Use /app/ directory for App Router compatibility
+
+🔌 API Wiring:
+
+Ensure all frontend data fetching functions are hooked into the API from the backend (/api/opportunities, /api/threads, etc.)
+
+Use React Query for caching, loading, and error states
+
+💡 Enable UI features:
+
+Display opportunity list with filters
+
+Show matched affiliate programs for each thread
+
+Allow manual crawl trigger (via POST /api/run-crawler)
+
+View crawler job history and status
+
+🎨 Keep the design system:
+
+TailwindCSS + shadcn/ui
+
+Responsive layout with proper component structure (e.g., cards, tables, modals)
+
+🧪 Testing/Verification:
+
+Test key API-connected components:
+
+Opportunity list
+
+Thread cards
+
+Affiliate program view
+
+Crawler control
+
+Confirm no type or rendering errors in dev logs
+
+🧾 Bonus (Optional but Helpful)
+Add a global Toast system for API errors/success messages
+
+Light/dark mode toggle
+
+Add loading skeletons where applicable
+
+✅ Final Goal:
+You should end up with a fully functional frontend UI, served from the main reddit-affiliate-v2 repo, that consumes real data from the backend and displays Reddit affiliate marketing opportunities in a beautiful dashboard interface.
+
+Once implemented, confirm:
+
+ UI loads without console errors
+
+ All data is pulled live from backend
+
+ Crawl button triggers backend
+
+ Opportunities update dynamically
+
+ Affiliate programs are editable/viewable
