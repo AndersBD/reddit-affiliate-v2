@@ -173,13 +173,22 @@ function DashboardPage() {
   // Handle run crawler now
   const handleRunCrawler = async () => {
     try {
-      await apiRequest('POST', '/api/scheduler/run-now');
+      // Show some feedback that crawler is running
+      console.log("Running crawler...");
+      // Call the run-crawler endpoint
+      await apiRequest('POST', '/api/run-crawler');
       queryClient.invalidateQueries({ queryKey: ['/api/crawl-history'] });
-      // After a short delay to allow crawler to finish:
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['/api/threads'] });
-        queryClient.invalidateQueries({ queryKey: ['/api/opportunities'] });
-      }, 5000);
+      
+      // After crawler completes, refresh opportunities
+      console.log("Refreshing opportunities...");
+      await apiRequest('POST', '/api/refresh-opportunities');
+      
+      // Invalidate queries to fetch latest data
+      queryClient.invalidateQueries({ queryKey: ['/api/threads'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/opportunities'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/serp-results'] });
+      
+      console.log("Crawler and opportunity refresh completed");
     } catch (error) {
       console.error('Failed to run crawler:', error);
     }

@@ -1,42 +1,27 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render as rtlRender } from '@testing-library/react';
-import { ReactElement } from 'react';
-import { trpc } from '../client/src/lib/trpc';
-import { createMemoryHistory } from 'history';
-import { Router } from 'wouter';
+import React from 'react';
+import { render } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '../client/src/lib/queryClient';
 
 // Create a custom render function that includes providers
-export function render(
-  ui: ReactElement,
-  {
-    route = '/',
-    history = createMemoryHistory({ initialEntries: [route] }),
-    queryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          retry: false,
-        },
-      },
-    }),
-    ...renderOptions
-  } = {}
+export function renderWithProviders(
+  ui: React.ReactElement,
+  { route = '/' } = {}
 ) {
-  function Wrapper({ children }: { children: React.ReactNode }) {
-    return (
-      <trpc.Provider client={{} as any} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <Router history={history}>{children}</Router>
-        </QueryClientProvider>
-      </trpc.Provider>
-    );
-  }
-
-  return {
-    ...rtlRender(ui, { wrapper: Wrapper, ...renderOptions }),
-    history,
-    queryClient,
-  };
+  // Set the route
+  window.history.pushState({}, '', route);
+  
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
 }
 
-// Re-export everything from testing-library
+// Reset handlers for tests
+export function resetHandlers() {
+  queryClient.clear();
+}
+
+// Export everything from testing-library
 export * from '@testing-library/react';
